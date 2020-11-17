@@ -1,0 +1,34 @@
+---
+title: "Motivation and Derivation of Distributions in this Package"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{gammacount-derivation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+bibliography: refs.bib
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, include=FALSE}
+library(gammacount)
+```
+
+# Gamma-Count (GC) Distribution
+
+@zeviani2013gammacount
+
+## Moving to Random Start Time
+
+# First Arrival Time Distribution
+
+# Gamma-Count with Random Start Time (GCRST)
+
+# Approximate GCRST Computation
+
+# References
