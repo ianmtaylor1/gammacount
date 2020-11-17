@@ -2,8 +2,8 @@ Package: gammacount
 Type: Package
 Title: Gamma-Count Distribution Functions
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
+Author: Ian Taylor
+Maintainer: Ian Taylor <ian@iantaylor.xyz>
 Description: The Gamma-count distribution, related distributions, and extensions
 License: MIT + file LICENSE
 Encoding: UTF-8
