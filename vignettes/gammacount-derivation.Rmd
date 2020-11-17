@@ -1,8 +1,11 @@
 ---
 title: "Motivation and Derivation of Distributions in this Package"
-output: rmarkdown::html_vignette
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+    number_sections: true
 vignette: >
-  %\VignetteIndexEntry{gammacount-derivation}
+  %\VignetteIndexEntry{Motivation and Derivation of Distributions in this Package}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 bibliography: refs.bib
@@ -15,13 +18,50 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r setup, include=FALSE}
+```{r setup}
 library(gammacount)
+library(ggplot2)
+library(gridExtra)
 ```
 
 # Gamma-Count (GC) Distribution
 
-@zeviani2013gammacount
+In a single sentence, the gamma-count distribution models the count of event arrivals in an interval when the times between events are distributed according to a gamma distribution. 
+
+This distribution was first derived in @winkelmann1995duration and @zeviani2013gammacount also provides a good overview. It is a generalization of a Poisson distribution, since the exponentially distributed arrival times of a Poisson process are special cases of the gamma distributed arrival times in this process. In this vignette I use the phrase "gamma-count process" to relate to the gamma-count distribution in the same way a Poisson process is related to the Poisson distribution.
+
+## Distribution Summary
+
+Let $\delta_i \sim \mathrm{gamma}(\alpha,\alpha)$, $i \geq 1$ be independent and identically distributed gamma wait times between events, so that $\tau_n = \sum_{i=1}^n \delta_i$ is the arrival time of the $n^\text{th}$ event. Note that $\mathrm{E}[\delta_i] = 1$ for all values of $\alpha$, but $\alpha$ affects the variance of $\delta_i$. I say $X \sim \mathrm{gc}(\lambda, \alpha)$ if $X$ is the count of these events in the interval $(0, \lambda]$.
+
+$$
+X \leq n \iff \tau_{n+1} > \lambda \\
+P(X \leq n) = P(\tau_{n+1} > \lambda) \\
+\tau_{n+1} = \sum_{i=1}^{n+1} \delta_i \sim \mathrm{gamma}((n+1)\alpha, \alpha)
+$$
+
+Then the CDF of the gamma-count distribution can be expressed in terms of the CDF of the gamma distribution, which is available in base `R` with `pgamma`. 
+
+## Under and Over-dispersion; Clustering and Regularity
+
+The effect of $\alpha$ on the gamma-count distribution is changing its dispersion. The value $\alpha=1$ results in the equidispersed Poisson distribution, $\alpha > 1$ results in an underdispersed distribution, and $\alpha < 1$ results in an overdispersed distribution.
+
+```{r dispersionplots, fig.width=7, fig.height=3, fig.align="center"}
+lambda <- 15
+x <- seq(0, 30)
+
+equi <- dgc(x, lambda, 1)
+over <- dgc(x, lambda, 0.3)
+under <- dgc(x, lambda, 3)
+
+ymax <- max(c(equi, over, under))
+par(mfrow=c(1,3))
+barplot(equi,  names.arg=x, main="Equidispersion", ylim=c(0, ymax))
+barplot(over,  names.arg=x, main="Overdispersion", ylim=c(0, ymax))
+barplot(under, names.arg=x, main="Underdispersion", ylim=c(0, ymax))
+```
+
+
 
 ## Moving to Random Start Time
 
