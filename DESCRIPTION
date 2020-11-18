@@ -8,7 +8,11 @@ Description: The Gamma-count distribution, related distributions, and extensions
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
-Suggests: 
+Suggests:
+    dplyr,
+    foreach,
+    ggplot2,
+    gridextra,
     knitr,
     rmarkdown
 VignetteBuilder: knitr

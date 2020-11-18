@@ -20,8 +20,11 @@ knitr::opts_chunk$set(
 
 ```{r setup}
 library(gammacount)
+
 library(ggplot2)
 library(gridExtra)
+library(foreach)
+library(dplyr)
 ```
 
 # Gamma-Count (GC) Distribution
@@ -44,15 +47,15 @@ Then the CDF of the gamma-count distribution can be expressed in terms of the CD
 
 ## Under and Over-dispersion; Clustering and Regularity
 
-The effect of $\alpha$ on the gamma-count distribution is changing its dispersion. The value $\alpha=1$ results in the equidispersed Poisson distribution, $\alpha > 1$ results in an underdispersed distribution, and $\alpha < 1$ results in an overdispersed distribution.
+The effect of $\alpha$ on the gamma-count distribution is changing its dispersion. The value $\alpha=1$ results in the equidispersed Poisson distribution. (The variance of a Poisson distributed random variable always equals its mean.) Values of $\alpha > 1$ result in an underdispersed distribution (lower variance), and values of $\alpha < 1$ result in an overdispersed distribution (higher variance).
 
-```{r dispersionplots, fig.width=7, fig.height=3, fig.align="center"}
+```{r dispersionplots, fig.width=7, fig.height=3, fig.align="center", fig.cap="Probability mass function of gamma-count distributions with varying dispersion"}
 lambda <- 15
 x <- seq(0, 30)
 
 equi <- dgc(x, lambda, 1)
-over <- dgc(x, lambda, 0.3)
-under <- dgc(x, lambda, 3)
+over <- dgc(x, lambda, 0.25)
+under <- dgc(x, lambda, 4)
 
 ymax <- max(c(equi, over, under))
 par(mfrow=c(1,3))
@@ -61,11 +64,85 @@ barplot(over,  names.arg=x, main="Overdispersion", ylim=c(0, ymax))
 barplot(under, names.arg=x, main="Underdispersion", ylim=c(0, ymax))
 ```
 
+The parameter $\alpha$ can also be thought of as affecting clustering and regularity in the underlying gamma-count process (i.e. the event arrivals themselves).  For $\alpha < 1$ there is a high probability that an event will immediately follow the previous one but then a long tail of large arrival times, resulting in clusters of events with larger gaps between the clusters. On the other hand for $\alpha > 1$, there is a lower probability of an arrival time being very far from the expected value of 1, resulting in more regularly spaced event arrivals. @winkelmann1995duration describes this in terms of hazard functions: for shape parameters greater than 1, gamma distributions have increasing hazard functions while for shape parameters less than 1, gamma distributions have decreasing hazard functions.
 
+```{r arrivalplots, fig.width=7, fig.height=4, fig.align="center", fig.cap="Demonstration of clustering and regularity in arrivals"}
+set.seed(20)
 
-## Moving to Random Start Time
+lambda <- 30
+
+n <- 100
+delta.equi  <- rgamma(n, shape=1, rate=1)
+delta.over  <- rgamma(n, shape=0.25, rate=0.25)
+delta.under <- rgamma(n, shape=4, rate=4)
+tau.equi  <- cumsum(delta.equi)
+tau.over  <- cumsum(delta.over)
+tau.under <- cumsum(delta.under)
+
+plot(x=tau.equi, y=rep(0.5, n), pch="x",  col="black",
+     main="Event Arrival Times", xlab="Time (t)", ylab="", yaxt="n",
+     ylim=c(0,2.5), xlim=c(0, lambda))
+points(x=tau.over, y=rep(1,n), col="red", pch="x")
+points(x=tau.under, y=rep(1.5,n), col="blue", pch="x")
+legend("top", legend=c("Equidispersed", "Clustered","Regular"),
+       pch="x", col=c("black", "red", "blue"), horiz=TRUE)
+```
+
+In the figure above, roughly the same number of events have arrived between 0 and $\lambda=`r lambda`$: `r sum(tau.equi <= lambda)` in the equidispersed case, `r sum(tau.over <= lambda)` in the overdispersed case, and `r sum(tau.under <= lambda)` in the underdispersed case. But $\alpha$ has affected the appearance and the spacing of the events. If this simulation were repeated, this would result in the overdispersed count having a high variance and the underdispersed count having a low variance as seen earlier.
+
+## Early process behavior
+
+There is a problem that occurs very early in this process when $\alpha$ is small (overdispersion) or large (underdispersion). Because the clock begins ticking for the first arrival $\delta_1$ at $t=0$, it is as if there were an uncounted event which arrived exactly at $t=0$. Because we also start counting events at $t=0$, the behavior that occurs here influences our count.  If $\alpha \gg 1$ then the first counted event will be unlikely to occur soon due to regularity, and for $\alpha \approx 0$ the process is very likely to start with an immediate cluster of early events before the next longer gap.
+
+For a Poisson process (special case of $\alpha = 1$) this doesn't matter because the exponential distribution is memoryless and the behavior near $t=0$ is the same as the behavior elsewhere.  If $\lambda$ is large this also has less effect because the early times account for less of the total watch time. But if $\lambda$ is small, then this early behavior dominates the whole process.
+
+This issue is illustrated by the mean and variance plots below for varying values of $\alpha$ and small $\lambda$.
+
+```{r plotmeanvar1, fig.width=7, fig.height=7}
+lambda.vals <- seq(0.02, 3, by=0.02)
+alpha.vals <- c(1, 2, 10, 20, 0.5, 0.1)
+max.x <- 200
+
+# Create data frame of means and variances for each lambda and alpha
+meanvar <- foreach(alpha=alpha.vals, .combine="rbind") %do% {
+  foreach(lambda=lambda.vals, .combine="rbind") %do% {
+    x <- c(0, seq_len(max.x))
+    probs <- dgc(x, lambda, alpha)
+    data.frame(lambda=lambda, alpha=alpha, under=(alpha >= 1), over=(alpha <= 1),
+               mean=sum(probs * x),
+               var=sum(probs * x^2) - sum(probs * x)^2)
+  }
+}
+meanvar$alpha <- factor(meanvar$alpha, levels=alpha.vals)
+
+meanplot.under <- ggplot(meanvar %>% filter(under == TRUE), aes(x=lambda, y=mean, color=alpha)) + 
+  geom_line() + 
+  ggtitle("Underdispersed Means")
+varplot.under <- ggplot(meanvar %>% filter(under == TRUE), aes(x=lambda, y=var, color=alpha)) + 
+  geom_line() + 
+  ggtitle("Underdispersed Variances")
+meanplot.over <- ggplot(meanvar %>% filter(over == TRUE), aes(x=lambda, y=mean, color=alpha)) + 
+  geom_line() + 
+  ggtitle("Overdispersed Means")
+varplot.over <- ggplot(meanvar %>% filter(over == TRUE), aes(x=lambda, y=var, color=alpha)) + 
+  geom_line() + 
+  ggtitle("Overdispersed Variances")
+grid.arrange(meanplot.under, varplot.under, meanplot.over, varplot.over, ncol=2, nrow=2)
+```
+
+In particular, notice that the mean for $\alpha < 1$ increases very quickly at first. This behavior would make it difficult to model counts with low mean and high dispersion using this distribution. For $\alpha > 1$, notice that the mean lags behind $\lambda$ and sometimes has somewhat step function-like behavior, while the variance does not increase monotonically with $\lambda$. This makes modeling low mean underdispersed counts difficult as well, since small changes in the parameters may result in large and unintuitive changes to the distribution.
+
+## Moving to a random start time
+
+I attempt to fix this by adjusting the starting time of the process away from $t=0$. That is, instead of counting events during the interval $(0,\lambda]$ we count events during the interval $(L,L+\lambda]$ for some start time $L$. 
+
+![Gamma-count process with a later start time](process-later-start.jpg){width=7in}
+
+The intuition is that if $L$ is large enough, then no matter how regular or clustered arrivals are in the process their locations near $L$ are uncertain. If $\alpha=1$ (the process is a Poisson process) then the time $L$ doesn't affect the distribution of counts, again, since the exponential distribution is memoryless. Instead of fixing $L$ at a large vaue, imagine we are somehow able to randomly choose $L$ on the whole of the positive finite number line. Alternatively, imagine $L \sim unif(0, m)$ and let $m \to \infty$. 
 
 # First Arrival Time Distribution
+
+# Joint First Arrival and Gamma-Count Distribution
 
 # Gamma-Count with Random Start Time (GCRST)
 
