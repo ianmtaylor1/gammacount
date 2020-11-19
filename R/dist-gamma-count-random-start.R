@@ -183,18 +183,7 @@ qgcrst <- Vectorize(
 
 # Random number generator for gamma-count random start time distribution
 rgcrst <- function(n, lambda, alpha=1) {
-  # Fill lambda to length n, in the style that other r___ function do.
-  lambda.fill <- recycle(lambda, n)
-  alpha.fill <- recycle(alpha, n)
-  # Generate first arrival times randomly
-  tau <- rft(n, alpha.fill)
-  # All returned values start out at zero
-  x <- rep(0, n)
-  # For tau's less than lambda, generate gamma-count rv
-  x[tau <= lambda.fill] <- 1 + rgc(sum(tau <= lambda.fill),
-                                   lambda.fill[tau <= lambda.fill] - tau[tau <= lambda.fill],
-                                   alpha.fill[tau <= lambda.fill])
-  # Return the random numbers
-  x
+  # Pass this off to the joint distribution rng, avoid repeated code
+  rgcrst.joint(n, lambda, alpha)[,"x"]
 }
 
