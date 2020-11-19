@@ -33,7 +33,7 @@ In a single sentence, the gamma-count distribution models the count of event arr
 
 This distribution was first derived in @winkelmann1995duration and @zeviani2013gammacount also provides a good overview. It is a generalization of a Poisson distribution, since the exponentially distributed arrival times of a Poisson process are special cases of the gamma distributed arrival times in this process. In this vignette I use the phrase "gamma-count process" to relate to the gamma-count distribution in the same way a Poisson process is related to the Poisson distribution.
 
-## Distribution Summary
+## Distribution Summary \label{sec:gc-definition}
 
 Let $\delta_i \sim \mathrm{gamma}(\alpha,\alpha)$, $i \geq 1$ be independent and identically distributed gamma wait times between events, so that $\tau_n = \sum_{i=1}^n \delta_i$ is the arrival time of the $n^\text{th}$ event. Note that $\mathrm{E}[\delta_i] = 1$ for all values of $\alpha$, but $\alpha$ affects the variance of $\delta_i$. I say $X \sim \mathrm{gc}(\lambda, \alpha)$ if $X$ is the count of these events in the interval $(0, \lambda]$.
 
@@ -138,9 +138,13 @@ I attempt to fix this by adjusting the starting time of the process away from $t
 
 ![Gamma-count process with a later start time](process-later-start.jpg){width=7in}
 
-The intuition is that if $L$ is large enough, then no matter how regular or clustered arrivals are in the process their locations near $L$ are uncertain. If $\alpha=1$ (the process is a Poisson process) then the time $L$ doesn't affect the distribution of counts, again, since the exponential distribution is memoryless. Instead of fixing $L$ at a large vaue, imagine we are somehow able to randomly choose $L$ on the whole of the positive finite number line. Alternatively, imagine $L \sim unif(0, m)$ and let $m \to \infty$. 
+The intuition is that if $L$ is large enough, then no matter how regular or clustered arrivals are in the process their locations near $L$ are uncertain. If $\alpha=1$ (the process is a Poisson process) then the time $L$ doesn't affect the distribution of counts, again, since the exponential distribution is memoryless. Instead of fixing $L$ at a large vaue, imagine we are somehow able to randomly choose $L$ uniformly on the whole of the positive number line. Alternatively, imagine $L \sim unif(0, m)$ and let $m \to \infty$. 
 
 # First Arrival Time Distribution
+
+With the new start time $L$, we reset the definition of the process from section \ref{sec:gc-definition}. Let the first event now refer to the first event after time $L$, and the first arrival time $\delta_1 = \tau_1$ now refer to the time between $L$ and the first event after $L$. The arrival times $\delta_i, i \geq 2$, are the same as before--defining times between sequential events after $L$. The derivation of the count CDF proceeds as in section \ref{sec:gc-definition} with the important difference that the distribution of $\delta_1=\tau_1$ is no longer $\mathrm{gamma}(\alpha,\alpha)$. In this section, we derive the new distribution of $\tau_1$.
+
+## 
 
 ## First arrival time density
 
@@ -149,6 +153,8 @@ The intuition is that if $L$ is large enough, then no matter how regular or clus
 ## First arrival time expected value
 
 # Joint First Arrival and Gamma-Count Distribution
+
+
 
 # Gamma-Count with Random Start Time (GCRST)
 
