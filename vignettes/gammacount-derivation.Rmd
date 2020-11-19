@@ -142,6 +142,12 @@ The intuition is that if $L$ is large enough, then no matter how regular or clus
 
 # First Arrival Time Distribution
 
+## First arrival time density
+
+## First arrival time CDF
+
+## First arrival time expected value
+
 # Joint First Arrival and Gamma-Count Distribution
 
 # Gamma-Count with Random Start Time (GCRST)
