@@ -71,7 +71,7 @@ dgcrst <- function(x, lambda, alpha=1, log=FALSE, diagnostics=FALSE) {
 }
 
 # CDF function
-pgcrst <- function(x, lambda, alpha, lower.tail=TRUE, log.p=FALSE, diagnostics=FALSE) {
+pgcrst <- function(x, lambda, alpha=1, lower.tail=TRUE, log.p=FALSE, diagnostics=FALSE) {
   # Determine length of output and recycle inputs to that length
   n <- max(length(x), length(lambda), length(alpha))
   x.fill      <- recycle(floor(x), n)

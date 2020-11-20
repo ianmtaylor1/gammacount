@@ -45,7 +45,7 @@ rft <- function(n, alpha=1) {
 # Quantile function for first arrival time distribution, using a
 # faster method by using a home-spun binary search than the old optimze()
 # way of doing it.
-qft <- function(p, alpha, lower.tail=TRUE, log.p=FALSE,
+qft <- function(p, alpha=1, lower.tail=TRUE, log.p=FALSE,
                  tol=.Machine$double.eps ^ 0.25, max.steps=1000) {
   # Correct p to put it on the lower tail, if necessary
   if (!lower.tail) {
@@ -100,7 +100,7 @@ qft <- function(p, alpha, lower.tail=TRUE, log.p=FALSE,
 # Calculates P(tau <= x) * E[tau | tau <= x] (for lower tail, or greater than x
 # for upper tail). This is equivalent to \int_0^x \tau f(\tau) d\tau for
 # lower tail, or with bounds from x to \infty for upper tail.
-ft.partial.ev <- function(x, alpha, lower.tail=TRUE, log=FALSE) {
+ft.partial.ev <- function(x, alpha=1, lower.tail=TRUE, log=FALSE) {
   # See derivation in statdocs
   log.pev <- if (lower.tail) {
     logsumexp(
