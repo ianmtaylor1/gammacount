@@ -33,6 +33,17 @@ rgc(n, lambda, alpha = 1)
 
 \item{n}{number of random values to return}
 }
+\value{
+dgc gives the (log) density, pgc gives the (log) distribution
+  function, qgc gives the quantile function, and rgc generates random counts.
+
+  Invalid lambda or alpha will result in return value NaN, with a warning.
+
+  The length of the result is determined by n for rgc, and the length of the
+  longest numeric argument for the other function. The numerical arguments
+  other than n are recycled to the length of the result. Only the first
+  elements of the logical arguments are used.
+}
 \description{
 Density, distribution function, quantile function, and random number
 generation for the gamma-count distribution with scale/mean parameter lambda
