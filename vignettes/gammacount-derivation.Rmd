@@ -144,13 +144,86 @@ The intuition is that if $L$ is large enough, then no matter how regular or clus
 
 With the new start time $L$, we reset the definition of the process from section \ref{sec:gc-definition}. Let the first event now refer to the first event after time $L$, and the first arrival time $\delta_1 = \tau_1$ now refer to the time between $L$ and the first event after $L$. The arrival times $\delta_i, i \geq 2$, are the same as before--defining times between sequential events after $L$. The derivation of the count CDF proceeds as in section \ref{sec:gc-definition} with the important difference that the distribution of $\delta_1=\tau_1$ is no longer $\mathrm{gamma}(\alpha,\alpha)$. In this section, we derive the new distribution of $\tau_1$.
 
-## 
+For the rest of this section, we will define $\tau := \tau_1$ as the first arrival time for convenience.
+
+## Derivation of the distribution
+
+First, call $S$ the time between the event immediately before $L$ and the event immediately after $L$. In other words, $S$ is the gap between events in which $L$ happens to land. Since $S$ is a gap between events we might think that $S \sim \mathrm{gamma}(\alpha, \alpha)$, and if $S$ were a gap chosen uniformly from all gaps this would be true. However, we are not choosing a gap at random, we are choosing a point $L$ randomly and looking at the size of the gap in which it lands. Therefore longer gaps are more likely to be chosen proportional to their length. So an extra $s$ is multiplied by the $\mathrm{gamma}(\alpha, \alpha)$ density and therefore $S \sim \mathrm{gamma}(\alpha + 1, \alpha)$.
+
+Now we know that $L$ is within a gap between events $S \sim \mathrm{gamma}(\alpha + 1, \alpha)$. We can assume that $L$ is uniformly distributed between the events immediately before and immediately after it, so that leaves $\tau$ having the following hierarchically defined distribution:
+\begin{align*}
+\tau | S=s &\sim \mathrm{uniform}(0, s) \\
+S &\sim \mathrm{gamma}(\alpha + 1, \alpha)
+\end{align*}
 
 ## First arrival time density
 
+The joint density $f(t, s)$ of $(\tau, S)$ is then
+$$f(t,s) = \frac{1}{s} \cdot \frac{\alpha^{\alpha+1}}{\Gamma(\alpha+1)} s^{\alpha} e^{-\alpha s}, \quad 0 \leq t \leq s.$$
+
+We can find the marginal density $f(t)$ of $\tau$ by integrating out $s$:
+\begin{align*}
+f(t) &= \int_t^\infty f(t,s) \mathrm{d}s \\
+&= \int_t^\infty \frac{1}{s} \cdot \frac{\alpha^{\alpha+1}}{\Gamma(\alpha+1)} s^{\alpha} e^{-\alpha s} \mathrm{d}s \\
+&= \int_t^\infty \cdot \frac{\alpha^{\alpha+1}}{\Gamma(\alpha+1)} s^{\alpha-1} e^{-\alpha s} \mathrm{d}s \\
+&= \int_t^\infty \cdot \frac{\alpha^{\alpha}}{\Gamma(\alpha)} s^{\alpha-1} e^{-\alpha s} \mathrm{d}s.
+\end{align*}
+So the density of $\tau$ can be expressed in terms of the CDF of a $\mathrm{gamma}(\alpha, \alpha)$ distribution, which is available in base `R` with `pgamma`.
+
 ## First arrival time CDF
 
+To find the CDF of $\tau$, we start with the same joint density $f(t, s)$ of $(\tau, S)$ and integrate to find $P(\tau > t) = 1 - F(t)$. 
+
+![The probability $P(\tau > t)$ involves integrating over the shaded area.](first-arrival-time-distribution.jpg){width=4in}
+
+\begin{align*}
+P(\tau > t) &= \int_t^\infty \int_t^s \frac{1}{s} \frac{\alpha^{\alpha+1}}{\Gamma(\alpha+1)} s^\alpha e^{-\alpha s} \mathrm{d}\tau \mathrm{d}s \\
+&= \int_t^\infty \frac{s-t}{s} \frac{\alpha^{\alpha+1}}{\Gamma(\alpha+1)} s^\alpha e^{-\alpha s} \mathrm{d}s \\
+&= \int_t^\infty \frac{\alpha^{\alpha+1}}{\Gamma(\alpha+1)} s^\alpha e^{-\alpha s} \mathrm{d}s - t \int_t^\infty \frac{\alpha^{\alpha+1}}{\Gamma(\alpha+1)} s^{\alpha-1} e^{-\alpha s} \mathrm{d}s \\
+&= \int_t^\infty \frac{\alpha^{\alpha+1}}{\Gamma(\alpha+1)} s^\alpha e^{-\alpha s} \mathrm{d}s - t \int_t^\infty \frac{\alpha^{\alpha}}{\Gamma(\alpha)} s^{\alpha-1} e^{-\alpha s} \mathrm{d}s \\
+&= \mathrm{pgamma}(t, \alpha+1, \alpha, \mathrm{lower.tail=F}) - t \cdot \mathrm{pgamma}(t, \alpha, \alpha, \mathrm{lower.tail=F})
+\end{align*}
+
 ## First arrival time expected value
+
+## Simulations of first arrival times
+
+In this section, I provide simulations verifying the derived first arrival time distributions.
+
+```{r first-arrival-simulations, fig.width=7, fig.height=5} 
+set.seed(2020)
+
+n <- 5000
+numevents <- 400
+Lmin <- 100
+Lmax <- 200
+
+alphas <- c(0.25, 1, 4)
+
+par(mfcol=c(2,3))
+for (alpha in alphas) {
+  S <- rep(0, n)
+  tau <- rep(0, n)
+  for (i in 1:n) {
+    arrivals <- cumsum(rgamma(numevents, alpha, alpha))
+    L <- runif(1, min=Lmin, max=Lmax)
+    priorevent <- max(arrivals[arrivals <= L])
+    nextevent <- min(arrivals[arrivals > L])
+    S[i] <- nextevent - priorevent
+    tau[i] <- nextevent - L
+  }
+  
+  hist(S, freq=FALSE, main=paste("Gap containing L, alpha =", alpha))
+  x <- seq(0, max(S), by=0.01)
+  lines(x, dgamma(x, alpha+1, alpha), col="red")
+  
+  hist(tau, freq=FALSE, main=paste("First Arrival Time, alpha =", alpha))
+  x <- seq(0, max(tau), by=0.01)
+  lines(x, dft(x, alpha), col="blue")
+}
+```
+
+The above code simulates `r numevents` event arrival times, picks an $L$ between `r Lmin` and `r Lmax`, then measures the size of the gap in which $L$ lands and the time between $L$ and the next event. This process is repeated for `r length(alphas)` values of $\alpha$ and `r n` trials. The histograms are the empirical times and the blue or red lines are the theoretical distributions.
 
 # Joint First Arrival and Gamma-Count Distribution
 
