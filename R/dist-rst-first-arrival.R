@@ -2,17 +2,60 @@
 # Distribution of first arrival time of a gamma-count process with random
 # observation start time L >> 0
 
+
+#' The First Arrival Time Distribution
+#'
+#' Density, distribution function, quantile function, and random number
+#' generation for the first arrival time distribution with parameter alpha
+#'
+#' The first arrival time distribution is defined as follows. If T ~ ft(alpha),
+#' then T|S=s ~ uniform(0, s) where S ~ gamma(alpha + 1, alpha). It models the
+#' distribution of the time until the first event in a gamma-count process after
+#' a time L which is randomly chosen from the positive real numbers. (Let
+#' L ~ uniform(0, M) and have M approach infinity.) The derivation and purpose
+#' of this distribution can be found in the 'gammacount-derivation' vignette.
+#'
+#' @param x,q vector of quantiles
+#' @param p vector of probabilities
+#' @param n number of random values to return
+#' @param alpha vector of (positive) parameters
+#' @param log,log.p logical; if TRUE, probabilities p are given as log(p)
+#' @param lower.tail logical; if TRUE, probabilities are P[X <= x], otherwise P[X > x]
+#' @param tol the tolerance for calculating quantiles
+#' @param max.steps the maximum number of steps used to compute the quantiles
+#'
+#' @return dft gives the (log) density, pft gives the (log) distribution
+#'   function, qft gives the quantile function, and rft generates random times.
+#'
+#'   Invalid alpha will result in return value NaN, with a warning.
+#'
+#'   The length of the result is determined by n for rft, and the length of the
+#'   longest numeric argument for the other functions. The numerical arguments
+#'   other than n are recycled to the length of the result. Only the first
+#'   elements of the logical arguments are used.
+#'
+#'   The returned values by qft are approximate, but are guaranteed to be
+#'   within tol of the true value. A bisection search is used, so computation
+#'   time increases with log(1/tol). If max.steps is reached, the current
+#'   estimate is returned with a warning.
+#'
+#' @name FirstArrivalTime
+NULL
+
+
 # pdf of the first time distribution
+#' @rdname FirstArrivalTime
 #' @export
 dft <- function(x, alpha=1, log=FALSE) {
   pgamma(x, shape=alpha, rate=alpha, lower.tail=FALSE, log.p=log)
 }
 
 # CDF function
+#' @rdname FirstArrivalTime
 #' @export
-pft <- function(x, alpha=1, lower.tail=TRUE, log.p=FALSE) {
+pft <- function(q, alpha=1, lower.tail=TRUE, log.p=FALSE) {
   # Cap x on the low end at zero.
-  x <- pmax(x, 0)
+  x <- pmax(q, 0)
   # Calculate the log of either the lower or upper tail
   # See derivation in statdocs
   lp <- if (lower.tail) {
@@ -34,23 +77,13 @@ pft <- function(x, alpha=1, lower.tail=TRUE, log.p=FALSE) {
   }
 }
 
-# Random number generator for first arrival time distribution in gamma-count
-# process
-#' @export
-rft <- function(n, alpha=1) {
-  # First draw the length of the gap we landed in
-  # alpha + 1 shape because longer gaps are more likely, proportional to length
-  gaps <- rgamma(n, shape=alpha + 1, rate=alpha)
-  # Assume uniform within that gap
-  runif(n, min=0, max=gaps)
-}
-
 # Quantile function for first arrival time distribution, using a
 # faster method by using a home-spun binary search than the old optimze()
 # way of doing it.
+#' @rdname FirstArrivalTime
 #' @export
 qft <- function(p, alpha=1, lower.tail=TRUE, log.p=FALSE,
-                 tol=.Machine$double.eps ^ 0.25, max.steps=1000) {
+                tol=.Machine$double.eps ^ 0.25, max.steps=1000) {
   # Correct p to put it on the lower tail, if necessary
   if (!lower.tail) {
     if (log.p) {
@@ -98,6 +131,18 @@ qft <- function(p, alpha=1, lower.tail=TRUE, log.p=FALSE,
   # By returning the average of x.min and x.max (which are at most 2 * tol
   # apart), we guarantee the result is within tol of a root
   return((x.min + x.max) / 2)
+}
+
+# Random number generator for first arrival time distribution in gamma-count
+# process
+#' @rdname FirstArrivalTime
+#' @export
+rft <- function(n, alpha=1) {
+  # First draw the length of the gap we landed in
+  # alpha + 1 shape because longer gaps are more likely, proportional to length
+  gaps <- rgamma(n, shape=alpha + 1, rate=alpha)
+  # Assume uniform within that gap
+  runif(n, min=0, max=gaps)
 }
 
 # Calculate the "partial expected value" of the first arrival time distribution.
