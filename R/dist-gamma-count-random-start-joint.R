@@ -47,7 +47,7 @@ rgcrst.joint <- function(n, lambda, alpha) {
                                    lambda.fill[tau <= lambda.fill] - tau[tau <= lambda.fill],
                                    alpha.fill[tau <= lambda.fill])
   # Return both tau and x as columns in a matrix
-  val <- cbind(tau, x)
-  colnames(val) <- c("tau", "x")
+  val <- cbind(x, tau)
+  colnames(val) <- c("x", "tau")
   return(val)
 }
