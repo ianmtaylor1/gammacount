@@ -3,11 +3,13 @@
 # observation start time L >> 0
 
 # pdf of the first time distribution
+#' @export
 dft <- function(x, alpha=1, log=FALSE) {
   pgamma(x, shape=alpha, rate=alpha, lower.tail=FALSE, log.p=log)
 }
 
 # CDF function
+#' @export
 pft <- function(x, alpha=1, lower.tail=TRUE, log.p=FALSE) {
   # Cap x on the low end at zero.
   x <- pmax(x, 0)
@@ -34,6 +36,7 @@ pft <- function(x, alpha=1, lower.tail=TRUE, log.p=FALSE) {
 
 # Random number generator for first arrival time distribution in gamma-count
 # process
+#' @export
 rft <- function(n, alpha=1) {
   # First draw the length of the gap we landed in
   # alpha + 1 shape because longer gaps are more likely, proportional to length
@@ -45,6 +48,7 @@ rft <- function(n, alpha=1) {
 # Quantile function for first arrival time distribution, using a
 # faster method by using a home-spun binary search than the old optimze()
 # way of doing it.
+#' @export
 qft <- function(p, alpha=1, lower.tail=TRUE, log.p=FALSE,
                  tol=.Machine$double.eps ^ 0.25, max.steps=1000) {
   # Correct p to put it on the lower tail, if necessary

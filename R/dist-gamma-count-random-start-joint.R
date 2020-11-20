@@ -4,6 +4,7 @@
 
 
 # Distribution (density) function
+#' @export
 dgcrst.joint <- function(x, tau, lambda, alpha=1, log=FALSE) {
   # Fill arguments to same length
   n <- max(length(x), length(tau), length(lambda), length(alpha))
@@ -34,6 +35,7 @@ dgcrst.joint <- function(x, tau, lambda, alpha=1, log=FALSE) {
 
 
 # Random number generator
+#' @export
 rgcrst.joint <- function(n, lambda, alpha=1) {
   # Fill lambda to length n, in the style that other r___ function do.
   lambda.fill <- recycle(lambda, n)

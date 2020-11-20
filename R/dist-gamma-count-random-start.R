@@ -6,6 +6,7 @@
 
 
 # PMF function
+#' @export
 dgcrst <- function(x, lambda, alpha=1, log=FALSE, diagnostics=FALSE) {
   # Determine length of output and recycle inputs to that length
   n <- max(length(x), length(lambda), length(alpha))
@@ -71,6 +72,7 @@ dgcrst <- function(x, lambda, alpha=1, log=FALSE, diagnostics=FALSE) {
 }
 
 # CDF function
+#' @export
 pgcrst <- function(x, lambda, alpha=1, lower.tail=TRUE, log.p=FALSE, diagnostics=FALSE) {
   # Determine length of output and recycle inputs to that length
   n <- max(length(x), length(lambda), length(alpha))
@@ -142,6 +144,7 @@ pgcrst <- function(x, lambda, alpha=1, lower.tail=TRUE, log.p=FALSE, diagnostics
 # to work with vector arguments
 # The expand/search design means that it runs with O(log(x)) calls to pgcrst,
 # where x is the final returned number
+#' @export
 qgcrst <- Vectorize(
   function(p, lambda, alpha=1, lower.tail=TRUE, log.p=FALSE) {
     # Correct p for lower.tail if necessary
@@ -182,6 +185,7 @@ qgcrst <- Vectorize(
 )
 
 # Random number generator for gamma-count random start time distribution
+#' @export
 rgcrst <- function(n, lambda, alpha=1) {
   # Pass this off to the joint distribution rng, avoid repeated code
   rgcrst.joint(n, lambda, alpha)[,"x"]

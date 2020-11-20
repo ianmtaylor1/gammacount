@@ -4,6 +4,7 @@
 
 
 # Approximate dgcrst function that doesn't have to call integrate()
+#' @export
 dgcrst.approx <- function(x, lambda, alpha=1, log=FALSE, segments=8) {
   # Determine length of output and recycle inputs to that length
   n <- max(length(x), length(lambda), length(alpha))
@@ -61,7 +62,8 @@ dgcrst.approx <- function(x, lambda, alpha=1, log=FALSE, segments=8) {
 
 
 # Approximate pgcrst function that doesn't have to call integrate()
-pgcrsta.approx <- function(x, lambda, alpha=1, log.p=FALSE, lower.tail=TRUE, segments=8) {
+#' @export
+pgcrst.approx <- function(x, lambda, alpha=1, log.p=FALSE, lower.tail=TRUE, segments=8) {
   # Determine length of output and recycle inputs to that length
   n <- max(length(x), length(lambda), length(alpha))
   x.fill      <- recycle(floor(x), n)
