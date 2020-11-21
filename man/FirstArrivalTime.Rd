@@ -36,7 +36,7 @@ rft(n, alpha = 1)
 
 \item{tol}{the tolerance for calculating quantiles}
 
-\item{max.steps}{the maximum number of steps used to compute the quantile}
+\item{max.steps}{the maximum number of steps used to compute the quantiles}
 
 \item{n}{number of random values to return}
 }
@@ -53,7 +53,8 @@ dft gives the (log) density, pft gives the (log) distribution
 
   The returned values by qft are approximate, but are guaranteed to be
   within tol of the true value. A bisection search is used, so computation
-  time increases with log(1/tol).
+  time increases with log(1/tol). If max.steps is reached, the current
+  estimate is returned with a warning.
 }
 \description{
 Density, distribution function, quantile function, and random number

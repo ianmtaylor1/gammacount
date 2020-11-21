@@ -5,7 +5,59 @@
 # arrival.
 
 
+#' The Gamma-Count Distribution with Random Start Time
+#'
+#' Density, distribution function, quantile function, and random number
+#' generation for the gamma-count distribution with random start time with
+#' scale/mean parameter lambda and dispersion parameter alpha
+#'
+#' The gamma-count distribution with random start time models the count of
+#' events arriving in the interval (L,L+lambda] where L is a large randomly
+#' chosen positive real number and the times between successive events follow a
+#' gamma(alpha, alpha) distribution. Since the expected time between events is
+#' 1, lambda is approximately the mean of the distribution. This
+#' distribution has the Poisson distribution as a special case when alpha = 1.
+#' The random start time improves the standard gamma-count distribution by
+#' removing the behavior near t=0 for under- or over-dispersed values of alpha.
+#'
+#' @param x vector of (non-negative integer) quantiles
+#' @param q vector of quantiles
+#' @param p vector of probabilities
+#' @param n number of random values to return
+#' @param lambda vector of (positive) scale/mean parameters
+#' @param alpha vector of (positive) dispersion parameters
+#' @param log,log.p logical; if TRUE, probabilities p are given as log(p)
+#' @param lower.tail logical; if TRUE, probabilities are P[X <= x], otherwise P[X > x]
+#' @param diagnostics logical; if TRUE, return diagnostics from integrate()
+#'
+#' @return dgcrst gives the (log) density, pgcrst gives the (log) distribution
+#'   function, qgcrst gives the quantile function, and rgcrst generates random
+#'   counts.
+#'
+#'   Invalid lambda or alpha will result in return value NaN, with a warning.
+#'
+#'   The length of the result is determined by n for rgcrst, and the length of the
+#'   longest numeric argument for the other functions. The numerical arguments
+#'   other than n are recycled to the length of the result. Only the first
+#'   elements of the logical arguments are used.
+#'
+#'   In dgcrst and pgcrst, if diagnostics=TRUE, the returned value is a list with
+#'   components value, abs.error, subdivisions, message. All components are
+#'   vectors with the same length. 'value' is the probability or density
+#'   requested, and all other values come directly from any calls
+#'   to integrate(). NA is put in the diagnostics for any value for which
+#'   integrate() did not need to be called.
+#'
+#' @seealso [integrate()] for diagnostic output details, [dgc()] for the
+#'   standard gamma-count distribution, and [dft()] for the first
+#'   arrival time after the random start time
+#'
+#' @name GammaCountRST
+NULL
+
+
 # PMF function
+#' @rdname GammaCountRST
 #' @export
 dgcrst <- function(x, lambda, alpha=1, log=FALSE, diagnostics=FALSE) {
   # Determine length of output and recycle inputs to that length
@@ -72,6 +124,7 @@ dgcrst <- function(x, lambda, alpha=1, log=FALSE, diagnostics=FALSE) {
 }
 
 # CDF function
+#' @rdname GammaCountRST
 #' @export
 pgcrst <- function(x, lambda, alpha=1, lower.tail=TRUE, log.p=FALSE, diagnostics=FALSE) {
   # Determine length of output and recycle inputs to that length
@@ -144,6 +197,7 @@ pgcrst <- function(x, lambda, alpha=1, lower.tail=TRUE, log.p=FALSE, diagnostics
 # to work with vector arguments
 # The expand/search design means that it runs with O(log(x)) calls to pgcrst,
 # where x is the final returned number
+#' @rdname GammaCountRST
 #' @export
 qgcrst <- Vectorize(
   function(p, lambda, alpha=1, lower.tail=TRUE, log.p=FALSE) {
@@ -185,6 +239,7 @@ qgcrst <- Vectorize(
 )
 
 # Random number generator for gamma-count random start time distribution
+#' @rdname GammaCountRST
 #' @export
 rgcrst <- function(n, lambda, alpha=1) {
   # Pass this off to the joint distribution rng, avoid repeated code
