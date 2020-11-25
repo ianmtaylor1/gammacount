@@ -20,6 +20,10 @@
 #' The random start time improves the standard gamma-count distribution by
 #' removing the behavior near t=0 for under- or over-dispersed values of alpha.
 #'
+#' dgcrst.approx and pgcrst.approx use an approximation to the integral which
+#' is relatively fast and still fairly accurate. The largest time savings is
+#' with vector input.
+#'
 #' @param x vector of (non-negative integer) quantiles
 #' @param q vector of quantiles
 #' @param p vector of probabilities
@@ -29,10 +33,11 @@
 #' @param log,log.p logical; if TRUE, probabilities p are given as log(p)
 #' @param lower.tail logical; if TRUE, probabilities are P[X <= x], otherwise P[X > x]
 #' @param diagnostics logical; if TRUE, return diagnostics from integrate()
+#' @param segments number of segments to use for approximate computation
 #'
-#' @return dgcrst gives the (log) density, pgcrst gives the (log) distribution
-#'   function, qgcrst gives the quantile function, and rgcrst generates random
-#'   counts.
+#' @return dgcrst and dgcrst.approx give the (log) density, pgcrst and
+#'   pgcrst.approx give the (log) distribution function, qgcrst gives the
+#'   quantile function, and rgcrst generates random counts.
 #'
 #'   Invalid lambda or alpha will result in return value NaN, with a warning.
 #'
@@ -50,7 +55,7 @@
 #'
 #' @seealso [integrate()] for diagnostic output details, [dgc()] for the
 #'   standard gamma-count distribution, and [dft()] for the first
-#'   arrival time after the random start time
+#'   arrival time distribution after the random start time
 #'
 #' @name GammaCountRST
 NULL
