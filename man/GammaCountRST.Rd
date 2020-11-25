@@ -11,7 +11,7 @@
 \alias{rgcrst}
 \title{The Gamma-Count Distribution with Random Start Time}
 \usage{
-dgcrst.approx(x, lambda, alpha = 1, log = FALSE, segments = 8)
+dgcrst.approx(x, lambda, alpha = 1, log = FALSE, segments = 10)
 
 pgcrst.approx(
   x,
@@ -19,7 +19,7 @@ pgcrst.approx(
   alpha = 1,
   log.p = FALSE,
   lower.tail = TRUE,
-  segments = 8
+  segments = 10
 )
 
 dgcrst(x, lambda, alpha = 1, log = FALSE, diagnostics = FALSE)
