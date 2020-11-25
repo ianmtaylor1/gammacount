@@ -3,9 +3,24 @@
 # their approximate nature
 
 
+# Determine the bounds of segments used to approximate the integral
+# Take a value p between 0 and 1, and return the corresponding value between
+# 0 and lambda for creating segments.
+# Works somewhat like the following:
+#  Divide the interval [0,1] evenly between segments. Divide the remaining
+#  length, lambda-1 assuming lambda > 1, logarithmically with base = exp(alpha)
+find.bound <- function(p, lambda, alpha) {
+  max.p <- -expm1(-alpha * pmax(lambda - 1, 0))
+  return(
+    pmin(p * lambda, p - log1p(-p * max.p) / alpha)
+  )
+}
+
+
 # Approximate dgcrst function that doesn't have to call integrate()
+#' @rdname GammaCountRST
 #' @export
-dgcrst.approx <- function(x, lambda, alpha=1, log=FALSE, segments=8) {
+dgcrst.approx <- function(x, lambda, alpha=1, log=FALSE, segments=10) {
   # Determine length of output and recycle inputs to that length
   n <- max(length(x), length(lambda), length(alpha))
   x.fill      <- recycle(x, n)
@@ -32,10 +47,7 @@ dgcrst.approx <- function(x, lambda, alpha=1, log=FALSE, segments=8) {
   log.partev.prev <- -Inf
   for (seg in seq_len(segments)/segments) {
     # What is the upper bound arrival time for this segment?
-    seg.bound <- pmin(
-      seg * lambda.fill[pos],
-      seg + (lambda.fill[pos] - 1) * seg ^ (alpha.fill[pos] + 1)
-    )
+    seg.bound <- find.bound(seg, lambda.fill[pos], alpha.fill[pos])
     # What is the expected first arrival time between the last segment boundary
     # and this one?
     log.cdf <- pft(seg.bound, alpha.fill[pos], log.p=TRUE)
@@ -62,8 +74,9 @@ dgcrst.approx <- function(x, lambda, alpha=1, log=FALSE, segments=8) {
 
 
 # Approximate pgcrst function that doesn't have to call integrate()
+#' @rdname GammaCountRST
 #' @export
-pgcrst.approx <- function(x, lambda, alpha=1, log.p=FALSE, lower.tail=TRUE, segments=8) {
+pgcrst.approx <- function(x, lambda, alpha=1, log.p=FALSE, lower.tail=TRUE, segments=10) {
   # Determine length of output and recycle inputs to that length
   n <- max(length(x), length(lambda), length(alpha))
   x.fill      <- recycle(floor(x), n)
@@ -91,10 +104,7 @@ pgcrst.approx <- function(x, lambda, alpha=1, log.p=FALSE, lower.tail=TRUE, segm
   log.partev.prev <- -Inf
   for (seg in seq_len(segments)/segments) {
     # What is the upper bound arrival time for this segment?
-    seg.bound <- pmin(
-      seg * lambda.fill[pos],
-      seg + (lambda.fill[pos] - 1) * seg ^ (alpha.fill[pos] + 1)
-    )
+    seg.bound <- find.bound(seg, lambda.fill[pos], alpha.fill[pos])
     # What is the expected first arrival time between the last segment boundary
     # and this one?
     log.cdf <- pft(seg.bound, alpha.fill[pos], log.p=TRUE)
