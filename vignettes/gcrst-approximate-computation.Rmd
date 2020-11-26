@@ -1,0 +1,85 @@
+---
+title: "GCRST Approximate Computation"
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+    number_sections: true
+vignette: >
+  %\VignetteIndexEntry{GCRST Approximate Computation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+bibliography: refs.bib
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(gammacount)
+
+library(ggplot2)
+```
+
+# Background
+
+The Gamma Count with Random Start Time (GCRST) distribution has probability mass function
+\begin{align*}
+P(X=x) &= \begin{cases}
+P(\tau > \lambda), & x=0 \\
+\int_0^\lambda P(X'(\tau) = x-1)f_\tau(t) \mathrm{d}t, & x > 0,
+\end{cases}
+\end{align*}
+where $\tau$ is the first event arrival time which follows the first arrival time distribution $f_\tau(t)$, and  $X'(\tau) \sim \mathrm{gc}(\lambda-\tau, \alpha)$. For more details, see the vignette on the derivation of the gamma-count distribution.
+
+For $x=0$, computing this requires only the CDF of the first arrival time distribution, which only depends on `pgamma`. However $x>0$ requires an integral without such a useful form. The default `dgcrst` and `pgcrst` functions use `R`'s built-in `integrate()` function which uses adaptive quadrature to get a fairly accurate answer. But this can be slow, especially because it isn't vectorized.
+
+This vignette is about a method of approximating this integral in a faster way.
+
+# Principle
+
+# Computation Details
+
+## Conditional expected value of $\tau$
+
+## Choice of intervals
+
+# Examples
+
+## Example PMF
+
+```{r exampleplot, fig.width=7, fig.height=5}
+lambda <- 4.1
+alpha <- 0.9
+
+x <- seq(0, 10)
+barplot(
+  rbind(dgcrst(x, lambda, alpha),
+        dgcrst.approx(x, lambda, alpha, segments=1),
+        dgcrst.approx(x, lambda, alpha, segments=5),
+        dgcrst.approx(x, lambda, alpha, segments=10)),
+  names.arg=x,
+  legend.text=c("Quadrature", "1 Segment", "5 Segments", "10 Segments"),
+  beside=TRUE
+)
+
+```
+
+## Speed comparison
+
+```{r timingcompare}
+
+```
+
+## Accuracy measurement
+
+```{r pmfcompare}
+
+```
+
+```{r cdfcompare}
+
+```
