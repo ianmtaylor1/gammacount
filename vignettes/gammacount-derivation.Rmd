@@ -98,7 +98,7 @@ For a Poisson process (special case of $\alpha = 1$) this doesn't matter because
 
 This issue is illustrated by the mean and variance plots below for varying values of $\alpha$ and small $\lambda$.
 
-```{r plotmeanvar1, fig.width=7, fig.height=7}
+```{r plotmeanvar1, cache=TRUE, fig.width=7, fig.height=7}
 lambda.vals <- seq(0.02, 3, by=0.02)
 alpha.vals <- c(1, 2, 10, 20, 0.5, 0.1)
 max.x <- 200
@@ -195,7 +195,7 @@ The expected value of the first arrival time can be found with the law of iterat
 
 In this section, I provide simulations verifying the derived first arrival time distributions.
 
-```{r first-arrival-simulations, fig.width=7, fig.height=5} 
+```{r first-arrival-simulations, cache=TRUE, fig.width=7, fig.height=5} 
 set.seed(2020)
 
 n <- 5000
@@ -294,7 +294,7 @@ where $X'(\tau) \sim \mathrm{gc}(\lambda-\tau, \alpha)$.
 
 ### Mean and Variance at small $\lambda$
 
-```{r plotmeanvar2, fig.width=7, fig.height=7}
+```{r plotmeanvar2, cache=TRUE, fig.width=7, fig.height=7}
 lambda.vals <- seq(0.02, 3, by=0.02)
 alpha.vals <- c(1, 2, 10, 20, 0.5, 0.1)
 max.x <- 200
