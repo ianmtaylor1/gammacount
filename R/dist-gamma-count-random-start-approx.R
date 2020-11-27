@@ -102,6 +102,7 @@ pgcrst.approx <- function(x, lambda, alpha=1, log.p=FALSE, lower.tail=TRUE, segm
   # of pgc(..., lambda - tau, ...) based on the probability of each segment.
   log.cdf.prev <- -Inf
   log.partev.prev <- -Inf
+  log.probs[pos] <- -Inf  # Log-scale sum depends on this starting value
   for (seg in seq_len(segments)/segments) {
     # What is the upper bound arrival time for this segment?
     seg.bound <- find.bound(seg, lambda.fill[pos], alpha.fill[pos])
