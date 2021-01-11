@@ -1,0 +1,201 @@
+---
+title: "GCRST Approximate Computation"
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+    number_sections: true
+vignette: >
+  %\VignetteIndexEntry{GCRST Approximate Computation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+bibliography: refs.bib
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(gammacount)
+
+library(ggplot2)
+library(foreach)
+library(dplyr)
+```
+
+# Background
+
+The Gamma Count with Random Start Time (GCRST) distribution has probability mass function
+\begin{align*}
+P(X=x) &= \begin{cases}
+P(\tau > \lambda), & x=0 \\
+\int_0^\lambda P(X'(\tau) = x-1)f_\tau(t) \mathrm{d}t, & x > 0,
+\end{cases}
+\end{align*}
+where $\tau$ is the first event arrival time which follows the first arrival time distribution $f_\tau(t)$, and  $X'(\tau) \sim \mathrm{gc}(\lambda-\tau, \alpha)$. For more details, see the vignette on the derivation of the gamma-count distribution.
+
+For $x=0$, computing this requires only the CDF of the first arrival time distribution, which only depends on `pgamma`. However $x>0$ requires an integral without such a useful form. The default `dgcrst` and `pgcrst` functions use `R`'s built-in `integrate()` function which uses adaptive quadrature to get a fairly accurate answer. But this can be slow, especially because it isn't vectorized.
+
+This vignette is about a method of approximating this integral in a faster way.
+
+# Principle
+
+# Computation Details
+
+## Conditional expected value of $\tau$
+
+## Choice of intervals
+
+# Examples
+
+## Example PMF
+
+```{r exampleplot, fig.width=7, fig.height=5}
+lambda <- 4.1
+alpha <- 0.7
+
+x <- seq(0, 10)
+barplot(
+  rbind(dgcrst(x, lambda, alpha),
+        dgc(x, lambda, alpha),
+        dgcrst.approx(x, lambda, alpha, segments=10)),
+  names.arg=x,
+  legend.text=c("Quadrature", "No RST", "10 Segment Approx"),
+  beside=TRUE
+)
+
+```
+
+## Speed comparison
+
+```{r timingcompare, cache=TRUE}
+set.seed(2020)
+
+n <- 1000
+trials <- 20
+
+lambda <- runif(n, min=0, max=100)
+alpha <- rexp(n, rate=log(2))
+x <- rpois(n, lambda)
+
+starttime <- Sys.time()
+for (i in 1:trials) {
+  dgcrst(x, lambda, alpha)
+}
+stoptime <- Sys.time()
+
+starttime.approx <- Sys.time()
+for (i in 1:trials) {
+  dgcrst.approx(x, lambda, alpha, segments=10)
+}
+stoptime.approx <- Sys.time()
+
+starttime.gc <- Sys.time()
+for (i in 1:trials) {
+  dgc(x, lambda, alpha)
+}
+stoptime.gc <- Sys.time()
+
+cat(
+  "Calculation time with integrate():  ",
+  (stoptime - starttime) / trials,
+  "\nCalculation time with approximation:",
+  (stoptime.approx - starttime.approx) / trials,
+  "\nCalculation time assuming no RST:   ",
+  (stoptime.gc - starttime.gc) / trials
+)
+
+```
+
+## Accuracy measurement
+
+```{r distcompare, cache=TRUE}
+lambdas <- c(
+  seq(0.5, 20, by=0.5), 
+  seq(21, 50, by=1)
+)
+alphas <- exp(c(
+  seq(log(0.1), log(10), length.out=21),
+  seq(log(0.01), log(0.1), length.out=5),
+  seq(log(10), log(100), length.out=5)
+))
+approx.levels <- c(1, 5, 10, 50)
+
+
+differences <- foreach(alpha=alphas, .combine="rbind") %do% {
+  foreach(lambda=lambdas, .combine="rbind") %do% {
+    # Which x's will we need to compute over?
+    x.range <- qgcrst(c(0.0005, 0.9995), lambda, alpha)
+    min.x <- x.range[1]
+    max.x <- x.range[2]
+    x <- seq(min.x, max.x)
+    # What is the "true" density and cdf?
+    dens.gcrst <- dgcrst(x, lambda, alpha)
+    cdf.gcrst <- pgcrst(x, lambda, alpha)
+    # Try varying numbers of segments
+    approximations <- foreach(approx=approx.levels, .combine="rbind") %do% {
+      dens.approx <- dgcrst.approx(x, lambda, alpha, segments=approx)
+      cdf.approx <- pgcrst.approx(x, lambda, alpha, segments=approx)
+      data.frame(
+        alpha=alpha,
+        lambda=lambda,
+        approximation=paste0("a",approx),
+        kl = sum(dens.gcrst * log(dens.gcrst / dens.approx), na.rm=TRUE),
+        sumdiff = 0.5 * sum(abs(dens.gcrst - dens.approx)),
+        ks = max(abs(cdf.gcrst - cdf.approx)),
+        stringsAsFactors=FALSE
+      )
+    }
+    # Use plain GC as an approximation
+    dens.gc <- dgc(x, lambda, alpha)
+    cdf.gc <- pgc(x, lambda, alpha)
+    # Combine the measurements of gc with the rest and return
+    rbind(
+      approximations,
+      data.frame(
+        alpha=alpha,
+        lambda=lambda,
+        approximation="gc",
+        kl = sum(dens.gcrst * log(dens.gcrst / dens.gc), na.rm=TRUE),
+        sumdiff = 0.5 * sum(abs(dens.gcrst - dens.gc)),
+        ks = max(abs(cdf.gcrst - cdf.gc)),
+        stringsAsFactors=FALSE
+      )
+    )
+  }
+}
+```
+
+
+```{r errorplots, fig.width=7, fig.height=5, }
+breaks <- c(0, outer(c(1,5), 10 ^ c(-4, -3, -2, -1)), 1)
+
+differences %>%
+  filter(approximation == "gc") %>%
+  ggplot(aes(x=lambda, y=alpha, z=sumdiff)) +
+  geom_contour_filled(aes(color=sumdiff), breaks=breaks) +
+  scale_y_log10()
+differences %>%
+  filter(approximation == "a1") %>%
+  ggplot(aes(x=lambda, y=alpha, z=sumdiff)) +
+  geom_contour_filled(aes(color=sumdiff), breaks=breaks) +
+  scale_y_log10()
+differences %>%
+  filter(approximation == "a5") %>%
+  ggplot(aes(x=lambda, y=alpha, z=sumdiff)) +
+  geom_contour_filled(aes(color=sumdiff), breaks=breaks) +
+  scale_y_log10()
+differences %>%
+  filter(approximation == "a10") %>%
+  ggplot(aes(x=lambda, y=alpha, z=sumdiff)) +
+  geom_contour_filled(aes(color=sumdiff), breaks=breaks) +
+  scale_y_log10()
+differences %>%
+  filter(approximation == "a50") %>%
+  ggplot(aes(x=lambda, y=alpha, z=sumdiff)) +
+  geom_contour_filled(aes(color=sumdiff), breaks=breaks) +
+  scale_y_log10()
+```
