@@ -12,7 +12,7 @@ Suggests:
     dplyr,
     foreach,
     ggplot2,
-    gridextra,
+    gridExtra,
     knitr,
     rmarkdown
 VignetteBuilder: knitr
