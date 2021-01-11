@@ -1,7 +1,7 @@
 Package: gammacount
 Type: Package
 Title: Gamma-Count Distribution Functions
-Version: 0.1.0
+Version: 1.0.0
 Author: Ian Taylor
 Maintainer: Ian Taylor <ian@iantaylor.xyz>
 Description: The Gamma-count distribution, related distributions, and extensions
@@ -12,7 +12,7 @@ Suggests:
     dplyr,
     foreach,
     ggplot2,
-    gridextra,
+    gridExtra,
     knitr,
     rmarkdown
 VignetteBuilder: knitr
