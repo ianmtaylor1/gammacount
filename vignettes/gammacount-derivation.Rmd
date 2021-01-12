@@ -285,7 +285,7 @@ Finally, we can integrate the previous joint density over $t$ to be left with th
 P(X=x) &= \int_0^\infty f(x, t) \mathrm{d}t \\
 &= \begin{cases}
 P(\tau > \lambda), & x=0 \\
-\int_0^\lambda P(X'(\tau) = x-1)f_\tau(t) \mathrm{d}t, & x > 0,
+\int_0^\lambda P(X'(t) = x-1)f_\tau(t) \mathrm{d}t, & x > 0,
 \end{cases}
 \end{align*}
 where $X'(\tau) \sim \mathrm{gc}(\lambda-\tau, \alpha)$.

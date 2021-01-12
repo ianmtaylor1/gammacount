@@ -32,7 +32,7 @@ The Gamma Count with Random Start Time (GCRST) distribution has probability mass
 \begin{align*}
 P(X=x) &= \begin{cases}
 P(\tau > \lambda), & x=0 \\
-\int_0^\lambda P(X'(\tau) = x-1)f_\tau(t) \mathrm{d}t, & x > 0,
+\int_0^\lambda P(X'(t) = x-1)f_\tau(t) \mathrm{d}t, & x > 0,
 \end{cases}
 \end{align*}
 where $\tau$ is the first event arrival time which follows the first arrival time distribution $f_\tau(t)$, and  $X'(\tau) \sim \mathrm{gc}(\lambda-\tau, \alpha)$. For more details, see the vignette on the derivation of the gamma-count distribution.
@@ -43,11 +43,33 @@ This vignette is about a method of approximating this integral in a faster way.
 
 # Principle
 
+We proceed by dividing the interval $[0,\lambda]$ into $n$ non-overlapping intervals, $I_1, \dots, I_n$ such that $I_i \cap I_j = \emptyset$ for $i \neq j$ and $\bigcup_{i=1}^n I_i = [0,\lambda]$. We then approximate the integral above as
+$$\int_0^\lambda P(X'(t) = x-1)f_\tau(t) \mathrm{d}t = \sum_{i=1}^n P(X'(E[\tau|\tau \in I_i]) = x-1)\cdot P(\tau \in I_i),$$
+essentially estimating $\tau$ by its conditional expectation within each interval, and performing a weighted average of the resulting probabilities.
+
 # Computation Details
 
 ## Conditional expected value of $\tau$
 
 ## Choice of intervals
+
+Intuitively, the intervals should be chosen to have approximately equal probability, i.e. $P(\tau \in I_1) \approx \dots \approx P(\tau \in I_n)$. Ensuring exact equality by computing quantiles of the first arrival time distribution is too time-consuming and also unnecessary, as long as a reasonable approximation can be computed quickly.
+
+To find such an approximation we can be guided by considering the distribution of $\tau$ as $\alpha \to 0$ or $\alpha \to \infty$. Assume $\lambda > 1$. As $\alpha \to \infty$, $\tau \overset{d}{\to} \mathrm{unif}(0,1)$, and as $\alpha \to 0$, $\tau|\tau \leq \lambda \overset{d}{\to} \mathrm{unif}(0,\lambda)$.
+
+```{r taudistplot, fig.width=7, fig.height=5}
+lambda <- 3
+
+tau <- seq(0, lambda, by=0.01)
+
+plot(x=tau, y=(tau <= 1), type="l", lty="dashed", ylim=c(0,2))
+lines(x=tau, y=rep(1/lambda, length(tau)), lty="dashed")
+
+for (alpha in c(0.01, 1, 100)) {
+  lines(x=tau, y=dft(tau, alpha)/pft(lambda, alpha))
+}
+
+```
 
 # Examples
 
@@ -114,15 +136,15 @@ cat(
 
 ```{r distcompare, cache=TRUE}
 lambdas <- c(
-  seq(0.5, 20, by=0.5), 
-  seq(21, 50, by=1)
+  seq(0.5, 10, by=0.5), 
+  seq(11, 50, by=1)
 )
 alphas <- exp(c(
   seq(log(0.1), log(10), length.out=21),
   seq(log(0.01), log(0.1), length.out=5),
   seq(log(10), log(100), length.out=5)
 ))
-approx.levels <- c(1, 5, 10, 50)
+approx.levels <- c(1, 5, 10)
 
 
 differences <- foreach(alpha=alphas, .combine="rbind") %do% {
@@ -190,11 +212,6 @@ differences %>%
   scale_y_log10()
 differences %>%
   filter(approximation == "a10") %>%
-  ggplot(aes(x=lambda, y=alpha, z=sumdiff)) +
-  geom_contour_filled(aes(color=sumdiff), breaks=breaks) +
-  scale_y_log10()
-differences %>%
-  filter(approximation == "a50") %>%
   ggplot(aes(x=lambda, y=alpha, z=sumdiff)) +
   geom_contour_filled(aes(color=sumdiff), breaks=breaks) +
   scale_y_log10()
