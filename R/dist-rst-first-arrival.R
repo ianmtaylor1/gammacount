@@ -47,7 +47,10 @@ NULL
 #' @rdname FirstArrivalTime
 #' @export
 dft <- function(x, alpha=1, log=FALSE) {
-  pgamma(x, shape=alpha, rate=alpha, lower.tail=FALSE, log.p=log)
+  p <- pgamma(x, shape=alpha, rate=alpha, lower.tail=FALSE, log.p=log)
+  outsupport <- recycle(x < 0, length(p))
+  p[(!is.na(p)) & outsupport] <- if (log) -Inf else 0
+  return(p)
 }
 
 # CDF function
