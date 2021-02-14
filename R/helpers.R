@@ -7,37 +7,39 @@
 
 # Helper function to compute log(exp(a) - exp(b))
 # a and b should be of equal length, but no checking is done
+# There are seventeen total cases for the input values of this function.
+# a and b can both be either: NaN, -Inf, Inf, or finite. If both are finite,
+# Then either a >= b or b < a.
+# In all cases, NaN should result if appropriate:
+#   1. Either a or b is NaN
+#   2. b > a (b either finite or infinite)
+#   3. Both a and b are +Inf
+# Every other case should result in a non-NaN value
 logdiffexp <- function(a, b) {
 
   diffs <- b - a
 
-  # Define cases
-  eithernan <- is.nan(a) | is.nan(b)
-  bothinf <- is.infinite(a) & is.infinite(b) & (a == b)
-  blarger <- (!eithernan) & (a < b)
-  smalldiff <- (!eithernan) & (!bothinf) & (!blarger) & (abs(diffs) < log(2))
-  largediff <- (!eithernan) & (!bothinf) & (!blarger) & (abs(diffs) >= log(2))
-
-  if (any(blarger)) {
-    warning("a must be larger than b. NaNs produced")
-  }
+  # Special cases
+  bothneginf <- is.infinite(a) & is.infinite(b) & (a == -Inf) & (b == -Inf)
+  smalldiff <- is.finite(a) & is.finite(b) & (abs(diffs) < log(2))
+  defaultcase <- (!bothneginf) & (!smalldiff)
 
   # Split computation according to
   # https://cran.r-project.org/web/packages/Rmpfr/vignettes/log1mexp-note.pdf
-  val <- rep(0, length(diffs))
-  # For large differences, use log1p(-exp())
-  val[largediff] <- log1p(-exp(diffs[largediff]))
-  # For small differences, use log(-expm1())
-  val[smalldiff] <- log(-expm1(diffs[smalldiff]))
-  # For either value being nan, the result is nan
-  val[eithernan] <- NaN
-  # If both are infinite and equal, the result is the same value as both
-  val[bothinf] <- 0
-  # In the cases where b > a, the result is NaN
-  val[blarger] <- NaN
+  val <- rep(NaN, length(diffs))
+  # The general case
+  val[defaultcase] <- a[defaultcase] + log1p(-exp(diffs[defaultcase]))
+  # The small difference case
+  val[smalldiff] <- a[smalldiff] + log(-expm1(diffs[smalldiff]))
+  # The negative infinity case
+  val[bothneginf] <- -Inf
 
-  # Add a to all values
-  val <- a + val
+  # Alert of any new NaNs
+  # Everything except the positive infinity case should be caught by log
+  # or log1p
+  if (any(is.infinite(a) & is.infinite(b) & (a > 0) & (b > 0))) {
+    warning("NaNs produced")
+  }
 
   return(val)
 }
