@@ -85,14 +85,25 @@ pgc <- function(q, lambda, alpha=1, lower.tail=TRUE, log.p=FALSE) {
 #' @export
 qgc <- Vectorize(
   function(p, lambda, alpha=1, lower.tail=TRUE, log.p=FALSE) {
-    # Correct p for lower.tail if necessary
-    if (!lower.tail) {
-      if (log.p) {
-        p <- logdiffexp(0, p)
-      } else {
-        p <- 1 - p
-      }
+    # Check for high and low values to return Inf or NaN
+    if (lower.tail && !log.p) {
+      if (p == 1) return(Inf)
+      if ((p > 1) || (p < 0)) return(NaN)
     }
+    if (lower.tail && log.p) {
+      if (p == 0) return(Inf)
+      if (p > 0) return(NaN)
+    }
+    if (!lower.tail && !log.p) {
+      if (p == 0) return(Inf)
+      if ((p > 1) || (p < 0)) return(NaN)
+    }
+    if (!lower.tail && log.p) {
+      if (p == -Inf) return(Inf)
+      if (p > 0) return (NaN)
+    }
+    # Correct p for lower.tail if necessary. Value multiplied by p and pgc().
+    mult <- if (lower.tail) { 1 } else { -1 }
     # This variable stores the largest known value of x that is too low:
     # pgc(low.x, lambda, alpha) < p
     low.x <- -1
@@ -101,7 +112,7 @@ qgc <- Vectorize(
     high.x <- Inf
     # Expansion phase: Check values of x = 2^k - 1 until one is found that is high enough
     x <- 0
-    while(pgc(x, lambda, alpha, log.p=log.p) < p) {
+    while(pgc(x, lambda, alpha, log.p=log.p, lower.tail=lower.tail) * mult < p * mult) {
       low.x <- x
       x <- 2 * x + 1
     }
@@ -110,7 +121,7 @@ qgc <- Vectorize(
     # high.x - low.x is guaranteed to be a power of two, so binary search is uncomplicated
     while(high.x - low.x > 1) {
       x <- (high.x + low.x) / 2
-      if (pgc(x, lambda, alpha, log.p=log.p) < p) {
+      if (pgc(x, lambda, alpha, log.p=log.p, lower.tail=lower.tail) * mult < p * mult) {
         low.x <- x
       } else {
         high.x <- x
