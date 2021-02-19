@@ -60,7 +60,7 @@ test_that("missing logsumexp inputs", {
 
 test_that("recycle to correct length", {
   v <- c(1,2,3,4,5)
-  for (n in c(1, 3, 5, 7, 10, 102)) {
+  for (n in c(0, 1, 3, 5, 7, 10, 102)) {
     expect_length(recycle(v, n), n)
   }
 })

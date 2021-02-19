@@ -60,5 +60,5 @@ logsumexp <- function(a, b) {
 # Ex: recycle(c(1,2,3), 7) produces c(1,2,3,1,2,3,1)
 # Ex: recycle(c(1,2,3), 2) produces c(1,2)
 recycle <- function(v, n) {
-  rep(v, ceiling(n / length(v)))[1:n]
+  rep(v, ceiling(n / length(v)))[seq_len(n)]
 }
