@@ -51,7 +51,7 @@ test_that("log equals the log", {
 })
 
 test_that("upper tail equals one minus", {
-  # density and distribution functions
+  # distribution function
   x <- seq(0, 8)
   lambda <- recycle(c(0.5, 5, 10, 0.5, 5, 10, 0.5, 5, 10), length(x))
   alpha <- recycle(c(0.1, 0.1, 0.1, 1, 1, 1, 10, 10, 10), length(x))
