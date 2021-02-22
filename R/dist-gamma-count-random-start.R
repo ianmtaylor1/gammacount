@@ -206,32 +206,46 @@ pgcrst <- function(x, lambda, alpha=1, lower.tail=TRUE, log.p=FALSE, diagnostics
 #' @export
 qgcrst <- Vectorize(
   function(p, lambda, alpha=1, lower.tail=TRUE, log.p=FALSE) {
-    # Correct p for lower.tail if necessary
-    if (!lower.tail) {
-      if (log.p) {
-        p <- logdiffexp(0, p)
-      } else {
-        p <- 1 - p
-      }
+    # Check for high and low values of p to return Inf or NaN
+    if (lower.tail && !log.p) {
+      if (p == 1) return(Inf)
+      if ((p > 1) || (p < 0)) return(NaN)
     }
-    # This variable stores the largest known value of x that is too low:
+    if (lower.tail && log.p) {
+      if (p == 0) return(Inf)
+      if (p > 0) return(NaN)
+    }
+    if (!lower.tail && !log.p) {
+      if (p == 0) return(Inf)
+      if ((p > 1) || (p < 0)) return(NaN)
+    }
+    if (!lower.tail && log.p) {
+      if (p == -Inf) return(Inf)
+      if (p > 0) return (NaN)
+    }
+    # Check for invalid values of parameters to return NaN
+    if ((lambda <= 0) || (alpha <= 0)) return(NaN)
+
+    # Correct p for lower.tail if necessary. Value multiplied by p and pgcst().
+    mult <- if (lower.tail) { 1 } else { -1 }
+
+    # low.x stores the largest known value of x that is too low:
     # pgcrst(low.x, lambda, alpha) < p
-    low.x <- -1
-    # This variable stores the smallest known value of x that is large enough:
+    # high.x stores the smallest known value of x that is large enough:
     # pgcrst(high.x, lambda, alpha) >= p
-    high.x <- Inf
-    # Expansion phase: Check values of x = 2^k - 1 until one is found that is high enough
-    x <- 0
-    while(pgcrst(x, lambda, alpha, log.p=log.p) < p) {
-      low.x <- x
-      x <- 2 * x + 1
+    # Expansion phase: search out away from zero until finding a range such that
+    # q \in (low.x, high.x] and the two above inequalities are satisfied
+    low.x <- -1
+    high.x <- 0
+    while(pgcrst(high.x, lambda, alpha, log.p=log.p, lower.tail=lower.tail) * mult < p * mult) {
+      low.x <- high.x
+      high.x <- 2 * high.x + 1
     }
-    high.x <- x
+
     # Search phase: the value is somewhere between low.x (exclusive) and high.x (inclusive)
-    # high.x - low.x is guaranteed to be a power of two, so binary search is uncomplicated
     while(high.x - low.x > 1) {
-      x <- (high.x + low.x) / 2
-      if (pgcrst(x, lambda, alpha, log.p=log.p) < p) {
+      x <- (high.x + low.x) %/% 2
+      if (pgcrst(x, lambda, alpha, log.p=log.p, lower.tail=lower.tail) * mult < p * mult) {
         low.x <- x
       } else {
         high.x <- x
