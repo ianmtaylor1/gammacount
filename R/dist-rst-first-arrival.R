@@ -87,14 +87,6 @@ pft <- function(q, alpha=1, lower.tail=TRUE, log.p=FALSE) {
 #' @export
 qft <- function(p, alpha=1, lower.tail=TRUE, log.p=FALSE,
                 tol=.Machine$double.eps ^ 0.25, max.steps=1000) {
-  # Correct p to put it on the lower tail, if necessary
-  if (!lower.tail) {
-    if (log.p) {
-      p <- logdiffexp(0, p)
-    } else {
-      p <- 1 - p
-    }
-  }
   # Fill the arguments like other q___ functions do
   n <- max(length(p), length(alpha))
   p <- recycle(p, n)
@@ -105,12 +97,20 @@ qft <- function(p, alpha=1, lower.tail=TRUE, log.p=FALSE,
   # starts at one and is decreasing, so an integral from 0 to x of both
   # the ft density and the uniform density will always be greater for the
   # uniform density).
-  x.min <- if (log.p) { exp(p) } else { p }
+  x.min <- qunif(p, lower.tail=lower.tail, log.p=log.p)
   # This distribution is stochactically less than gamma(a+1, a) due to how
   # it is defined. So the p quantile of gamma(a+1, a) will always be greater
   # than the p quantile of this distribution
-  x.max <- qgamma(p, alpha+1, rate=alpha, log.p=log.p)
-  done <- (x.max - x.min <= 2 * tol)
+  x.max <- qgamma(p, alpha+1, rate=alpha, log.p=log.p, lower.tail=lower.tail)
+
+  # The previous call to qgamma checks p and alpha for us. If p is 1 or outside
+  # the range (0,1) x.max will be Inf or NaN, respectively. If alpha < 0, then
+  # x.max will be NaN. Either value will carry through in the final step of
+  # (x.min + x.max) / 2
+  done <- (!is.finite(x.max)) | (x.max - x.min <= 2 * tol)
+
+  # Correct p for lower.tail if necessary. Value multiplied by p and pft().
+  mult <- if (lower.tail) { 1 } else { -1 }
 
   # Loop until everyone has converged
   step <- 1
@@ -119,13 +119,13 @@ qft <- function(p, alpha=1, lower.tail=TRUE, log.p=FALSE,
     # fx is a vector of evaluated function values with length == sum(!done)
     # We avoid recalling pft again for entries which are already sufficiently
     # converged
-    fx <- pft(x[!done], alpha[!done], log.p=log.p) - p[!done]
+    fx <- (pft(x[!done], alpha[!done], log.p=log.p, lower.tail=lower.tail) - p[!done]) * mult
     # If fx <= 0, then x is too low of a point
     x.min[!done][fx <= 0] <- x[!done][fx <= 0]
     # If fx >= 0, then x is too high of a point
     x.max[!done][fx >= 0] <- x[!done][fx >= 0]
     # See who is done now
-    done <- (x.max - x.min <= 2 * tol)
+    done <- done | (x.max - x.min <= 2 * tol) # Things only get more done.
     step <- step + 1
   }
   if ((step > max.steps) && (!all(done))) {
