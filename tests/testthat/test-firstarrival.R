@@ -64,3 +64,15 @@ test_that("output is correct length", {
     }
   }
 })
+
+test_that("rng matches cdf (approximately)", {
+  set.seed(123) # Set the seed so that no failures by chance
+  alpha.vals <- c(0.01, 0.1, 1, 10, 100)
+  testsig <- 0.01 # Small enough to avoid false positives
+  n <- 100000 # Large enough for high power
+  for (alpha in alpha.vals) {
+    x <- rft(n, alpha)
+    testresult <- ks.test(x, pft, alpha=alpha)
+    expect_gt(testresult$p.value, testsig)
+  }
+})
