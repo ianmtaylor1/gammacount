@@ -112,16 +112,39 @@ qgc <- Vectorize(
     # pgc(low.x, lambda, alpha) < p
     # high.x stores the smallest known value of x that is large enough:
     # pgc(high.x, lambda, alpha) >= p
-    # Expansion phase: search out away from zero until finding a range such that
-    # q \in (low.x, high.x] and the two above inequalities are satisfied
-    low.x <- -1
-    high.x <- 0
-    while(pgc(high.x, lambda, alpha, log.p=log.p, lower.tail=lower.tail) * mult < p * mult) {
-      low.x <- high.x
-      high.x <- 2 * high.x + 1
+
+    # Initial low and high estimates from poisson quantiles. Assuming qpois is
+    # accurate, this interval will contain the true quantile for the gc
+    # distribution. It should be reasonably close for the gcrst distribution,
+    # within one or two expansion phases.
+    poisq <- qpois(p, lambda * alpha, lower.tail=lower.tail, log.p=log.p)
+    if (is.finite(poisq)) {
+      low.x <- floor(poisq / alpha) - 1
+      high.x <- ceiling((poisq + 1) / alpha) - 1
+    } else {
+      # Fallback in case qpois can't handle the far tail
+      low.x <- -1
+      high.x <- ceiling(2 * lambda)
     }
 
-    # Search phase: the value is somewhere between low.x (exclusive) and high.x (inclusive)
+    # Expansion phase: search away from the initial interval until finding a
+    # range such that q \in (low.x, high.x] and the two above inequalities are
+    # satisfied. Only one of expand-up or expand-down will ever happen
+    # Expand-up
+    while(pgc(high.x, lambda, alpha, log.p=log.p, lower.tail=lower.tail) * mult < p * mult) {
+      step <- ceiling(1.414 * (high.x - low.x))
+      low.x <- high.x
+      high.x <- low.x + step
+    }
+    # Expand-down
+    while(pgc(low.x, lambda, alpha, log.p=log.p, lower.tail=lower.tail) * mult >= p * mult) {
+      step <- ceiling(1.414 * (high.x - low.x))
+      high.x <- low.x
+      low.x <- max(high.x - step, -1)
+    }
+
+    # Search phase: the value is somewhere between low.x (exclusive) and high.x
+    # (inclusive). Divide this range roughly in half until the value is found
     while(high.x - low.x > 1) {
       x <- (high.x + low.x) %/% 2
       if (pgc(x, lambda, alpha, log.p=log.p, lower.tail=lower.tail) * mult < p * mult) {
@@ -130,6 +153,7 @@ qgc <- Vectorize(
         high.x <- x
       }
     }
+
     # low.x and high.x are one apart, meaning that high.x is the value to return
     return(high.x)
   },
