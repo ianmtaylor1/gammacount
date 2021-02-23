@@ -76,3 +76,18 @@ test_that("rng matches cdf (approximately)", {
     expect_gt(testresult$p.value, testsig)
   }
 })
+
+test_that("partial ev passes basic checks", {
+  # Check that full calculation leads to EV.
+  alpha <- c(0.01, 0.1, 1, 10, 100)
+  expect_equal(ft.partial.ev(0, alpha, lower.tail=FALSE), (alpha + 1) / (2 * alpha))
+  # Check that other boundaries return zero
+  expect_equal(ft.partial.ev(0, alpha), rep(0, length(alpha)))
+  # Lower tail and upper tail add up to expected value
+  x <- seq(0.1, 10, by=0.1)
+  alpha <- recycle(alpha, length(x))
+  expect_equal(
+    ft.partial.ev(x, alpha, lower.tail=TRUE) +
+      ft.partial.ev(x, alpha, lower.tail=FALSE),
+    (alpha + 1) / (2 * alpha))
+})
