@@ -28,11 +28,14 @@ logdiffexp <- function(a, b) {
   # https://cran.r-project.org/web/packages/Rmpfr/vignettes/log1mexp-note.pdf
   val <- rep(NaN, length(diffs))
   # The general case
-  val[defaultcase] <- a[defaultcase] + log1p(-exp(diffs[defaultcase]))
+  val[defaultcase] <- log1p(-exp(diffs[defaultcase]))
   # The small difference case
-  val[smalldiff] <- a[smalldiff] + log(-expm1(diffs[smalldiff]))
+  val[smalldiff] <- log(-expm1(diffs[smalldiff]))
   # The negative infinity case
-  val[bothneginf] <- -Inf
+  val[bothneginf] <- 0
+
+  # Add in the factored out larger value
+  val <- a + val
 
   # Alert of any new NaNs
   # Everything except the positive infinity case should be caught by log
