@@ -304,6 +304,90 @@ P(\tau > \lambda), & x=0 \\
 \end{align*}
 where $X'(\tau) \sim \mathrm{gc}(\lambda-\tau, \alpha)$.
 
+We can also write the complementary cdf of the GCRST distribution as an integral:
+\begin{align*}
+P(X>x) &= \begin{cases}
+P(\tau <= \lambda), & x=0 \\
+\int_0^\lambda P(X'(t) > x-1)f_\tau(t) \mathrm{d}t, & x > 0,
+\end{cases}
+\end{align*}
+with $X'(\tau)$ same as above.
+
+### Evaluating the GCRST cdf
+
+In this section I evaluate the GCRST complementary cdf, $P(X > n)$ for the case where $n > 0$. My goal, same as elsewhere in this document, is to be able to express it in terms of a set finite number of evaluations of the `pgamma` function in `R`.
+
+In this section I use $\Gamma(s, x) = \int_x^\infty t^{s-1} e^{-t} \mathrm{d}t$ as the upper incomplete gamma function, and $\gamma(s, x) = \int_0^x t^{s-1} e^{-t} \mathrm{d}t = \Gamma(s) - \Gamma(s, x)$ as the lower incomplete gamma function. I also use $Q(s, x) = \Gamma(s,x)/\Gamma(s)$ as the upper regularized incomplete gamma function, with $P(s,x) = \gamma(s,x)/\Gamma(s)$ as the lower regularized incomplete gamma function.
+
+First, let's rewrite the integral in terms of these functions. For $X\sim \mathrm{gcrst}(\lambda,\alpha)$, $n > 0$, and $X'(\tau) \sim \mathrm{gc}(\lambda-\tau, \alpha)$,
+\begin{align*}
+I := \mathrm{P}(X > n) &= \int_0^\lambda f_\tau(t) \mathrm{P}(X'(t) > n-1) \mathrm{d}t \\
+&= \int_0^\lambda Q(\alpha, \alpha t)P(n\alpha, \alpha(\lambda - t)) \mathrm{d}t \\
+&= (\Gamma(\alpha)\Gamma(n\alpha))^{-1} \int_0^\lambda \Gamma(\alpha, \alpha t)\gamma(n\alpha, \alpha(\lambda - t)) \mathrm{d}t \\
+&= (\alpha\Gamma(\alpha)\Gamma(n\alpha))^{-1} \int_0^{\alpha\lambda} \Gamma(\alpha, x) \gamma(n\alpha, \alpha\lambda - x) \mathrm{d}x, & \text{through substituting $x=\alpha t$}
+\end{align*}
+Here, $Q(\alpha, \alpha t) = f_\tau(t)$, and the $P(n\alpha, \alpha(\lambda - t)) = \mathrm{P}(X'(t) > n-1)$. (Note the difference between $P(\cdot, \cdot)$, the lower regularized incomplete gamma function and $\mathrm{P}$, the probability operator. Sorry for the confusion, I will try to make it clear when I am using the probability operator.) The second equality comes from requiring the $n^{th}$ arrival to occur within the remaining time $\lambda - t$, in the gamma-count process.
+
+Using integration by parts with $u=\gamma(n\alpha, \alpha\lambda - x)$ and $\mathrm{d}v = \Gamma(\alpha, x)\mathrm{d}x$ gives next:
+\begin{align*}
+I &= \left.(\alpha\Gamma(\alpha)\Gamma(n\alpha))^{-1} (x\Gamma(\alpha, x) - \Gamma(\alpha + 1, x))\gamma(n\alpha, \alpha\lambda - x)\right|_0^{\alpha\lambda} \\
+&\quad+ (\alpha\Gamma(\alpha)\Gamma(n\alpha))^{-1}\int_0^{\alpha\lambda} (x\Gamma(\alpha, x) - \Gamma(\alpha + 1, x))(\alpha\lambda - x)^{n\alpha - 1}e^{-(\alpha\lambda - x)}\mathrm{d}x \\
+&= \left.(\alpha\Gamma(\alpha)\Gamma(n\alpha))^{-1} (x\Gamma(\alpha, x) - \Gamma(\alpha + 1, x))\gamma(n\alpha, \alpha\lambda - x)\right|_0^{\alpha\lambda} & := A \\
+&\quad+ (\alpha\Gamma(\alpha)\Gamma(n\alpha))^{-1}\int_0^{\alpha\lambda} x\Gamma(\alpha, x)(\alpha\lambda - x)^{n\alpha - 1}e^{-(\alpha\lambda - x)}\mathrm{d}x & := B\\
+&\quad- (\alpha\Gamma(\alpha)\Gamma(n\alpha))^{-1}\int_0^{\alpha\lambda} \Gamma(\alpha + 1, x)(\alpha\lambda - x)^{n\alpha - 1}e^{-(\alpha\lambda - x)}\mathrm{d}x & := C
+\end{align*}
+We label the parts as shown in the right margin so that $I = A + B - C$, and proceed with each part.
+
+First,
+\begin{align*}
+A &= \left.(\alpha\Gamma(\alpha)\Gamma(n\alpha))^{-1} (x\Gamma(\alpha, x) - \Gamma(\alpha + 1, x))\gamma(n\alpha, \alpha\lambda - x)\right|_0^{\alpha\lambda} \\
+&= (\alpha\Gamma(\alpha)\Gamma(n\alpha))^{-1} \Gamma(\alpha+1, 0) \gamma(n\alpha, \alpha\lambda) \\
+&= P(n\alpha, \alpha\lambda).
+\end{align*}
+
+Next, we find $C$:
+\begin{align*}
+C &= (\alpha\Gamma(\alpha)\Gamma(n\alpha))^{-1}\int_0^{\alpha\lambda} \Gamma(\alpha + 1, x)(\alpha\lambda - x)^{n\alpha - 1}e^{-(\alpha\lambda - x)}\mathrm{d}x \\
+&= \int_0^{\alpha\lambda} Q(\alpha + 1, x) \left[\frac{1}{\Gamma(n\alpha)}(\alpha\lambda - x)^{n\alpha - 1}e^{-(\alpha\lambda - x)}\right] \mathrm{d}x \\
+&= \int_0^{\alpha\lambda} Q(\alpha + 1, \alpha\lambda - t) \left[\frac{1}{\Gamma(n\alpha)} t^{n\alpha - 1}e^{-t}\right] \mathrm{d}t, & \text{by substituting $t=\alpha\lambda - x$.}
+\end{align*}
+
+This is starting to look a lot like the convolution between the complementary cdf of a $\mathrm{gamma}(\alpha + 1, 1)$ random variable and the pdf of a $\mathrm{gamma}(n\alpha, 1)$ random variable. Let's get it the rest of the way there. To make $Q$ behave more like the $\mathrm{gamma}$ complementary cdf, assume that $Q(s, x) = 1$ for $x < 0$. Note that this doesn't change the value of the integral so far because $\alpha\lambda - t \geq 0$ for $0 \leq t \leq \alpha\lambda$.
+\begin{align*}
+C &= \int_0^\infty Q(\alpha + 1, \alpha\lambda - t) \left[\frac{1}{\Gamma(n\alpha)} t^{n\alpha - 1}e^{-t}\right] \mathrm{d}t - \int_{\alpha\lambda}^\infty \frac{1}{\Gamma(n\alpha)} t^{n\alpha - 1}e^{-t} \mathrm{d}t \\
+&= Q((n+1)\alpha + 1, \alpha\lambda) - Q(n\alpha, \alpha\lambda).
+\end{align*}
+
+Now we find $B$. Starting with the same substitution of $t=\alpha\lambda - x$, we get:
+\begin{align*}
+B &= (\alpha\Gamma(\alpha)\Gamma(n\alpha))^{-1}\int_0^{\alpha\lambda} x\Gamma(\alpha, x)(\alpha\lambda - x)^{n\alpha - 1}e^{-(\alpha\lambda - x)}\mathrm{d}x \\
+&= \frac{1}{\alpha}\int_0^{\alpha\lambda} x \cdot Q(\alpha,x) \left[\frac{1}{\Gamma(n\alpha)} (\alpha\lambda - x)^{n\alpha - 1}e^{-(\alpha\lambda - x)}\right]\mathrm{d}x \\
+&= \frac{1}{\alpha}\int_0^{\alpha\lambda} (\alpha\lambda - t) Q(\alpha, \alpha\lambda - t) \left[\frac{1}{\Gamma(n\alpha)} t^{n\alpha - 1}e^{-t}\right]\mathrm{d}t \\
+&= \lambda \int_0^{\alpha\lambda} Q(\alpha, \alpha\lambda - t) \left[\frac{1}{\Gamma(n\alpha)} t^{n\alpha - 1}e^{-t}\right]\mathrm{d}t - \frac{1}{\alpha}\int_0^{\alpha\lambda} Q(\alpha, \alpha\lambda - t) \left[\frac{1}{\Gamma(n\alpha)} t^{n\alpha}e^{-t}\right]\mathrm{d}t \\
+&:= B1 - B2
+\end{align*}
+Then we can notice the same convolution pattern as in $C$ to evaluate $B1$ and $B2$:
+\begin{align*}
+B1 &= \lambda \int_0^{\alpha\lambda} Q(\alpha, \alpha\lambda - t) \left[\frac{1}{\Gamma(n\alpha)} t^{n\alpha - 1}e^{-t}\right]\mathrm{d}t \\
+&= \lambda \left[Q((n+1)\alpha, \alpha\lambda) - Q(n\alpha, \alpha\lambda)\right] \\
+B2 &= \frac{1}{\alpha}\int_0^{\alpha\lambda} Q(\alpha, \alpha\lambda - t) \left[\frac{1}{\Gamma(n\alpha)} t^{n\alpha}e^{-t}\right]\mathrm{d}t \\
+&= n\int_0^{\alpha\lambda} Q(\alpha, \alpha\lambda - t) \left[\frac{1}{\Gamma(n\alpha+1)} t^{n\alpha}e^{-t}\right]\mathrm{d}t \\
+&= n\left[Q((n+1)\alpha+1, \alpha\lambda) - Q(n\alpha + 1, \alpha\lambda)\right]
+\end{align*}
+
+Finally, we recombine the parts to find $I = A + (B1 - B2) - C$:
+\begin{align*}
+\mathrm{P}(X > n) := I &= (A - C) + (B1 - B2) \\
+&= P(n\alpha, \alpha\lambda) - (Q((n+1)\alpha + 1, \alpha\lambda) - Q(n\alpha, \alpha\lambda)) \\
+&\quad+ (\lambda \left[Q((n+1)\alpha, \alpha\lambda) - Q(n\alpha, \alpha\lambda)\right] - n\left[Q((n+1)\alpha+1, \alpha\lambda) - Q(n\alpha + 1, \alpha\lambda)\right]) \\
+&= 1 - Q((n+1)\alpha + 1, \alpha\lambda) \\
+&\quad+ (\lambda \left[Q((n+1)\alpha, \alpha\lambda) - Q(n\alpha, \alpha\lambda)\right] - n\left[Q((n+1)\alpha+1, \alpha\lambda) - Q(n\alpha + 1, \alpha\lambda)\right]) \\
+&= 1 - \left[(n+1)Q((n+1)\alpha + 1, \alpha\lambda) - nQ(n\alpha + 1, \alpha\lambda) + \lambda Q(n\alpha, \alpha\lambda) - \lambda Q((n+1)\alpha, \alpha\lambda)\right]
+\end{align*}
+Conveniently we can also get the probability
+$$\mathrm{P}(X \leq n) = (n+1)Q((n+1)\alpha + 1, \alpha\lambda) - nQ(n\alpha + 1, \alpha\lambda) + \lambda Q(n\alpha, \alpha\lambda) - \lambda Q((n+1)\alpha, \alpha\lambda),$$
+for $n > 0$. The $n=0$ case remains in terms of the first arrival time cdf.
+
 ## Simulations and demonstration of GCRST distribution
 
 ### Mean and Variance at small $\lambda$
