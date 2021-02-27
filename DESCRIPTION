@@ -1,7 +1,7 @@
 Package: gammacount
 Type: Package
 Title: Gamma-Count Distribution Functions
-Version: 1.0.2
+Version: 2.0.0
 Author: Ian Taylor
 Maintainer: Ian Taylor <ian@iantaylor.xyz>
 Description: The Gamma-count distribution, related distributions, and extensions
