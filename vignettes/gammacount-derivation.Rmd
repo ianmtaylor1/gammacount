@@ -31,7 +31,7 @@ library(dplyr)
 
 In a single sentence, the gamma-count distribution models the count of event arrivals in an interval when the times between events are distributed according to a gamma distribution. 
 
-This distribution was first derived in @winkelmann1995duration and @zeviani2013gammacount also provides a good overview. It is a generalization of a Poisson distribution, since the exponentially distributed arrival times of a Poisson process are special cases of the gamma distributed arrival times in this process. In this vignette I use the phrase "gamma-count process" to relate to the gamma-count distribution in the same way a Poisson process is related to the Poisson distribution.
+This distribution was first derived in @winkelmann1995duration. @zeviani2013gammacount also provides a good overview of the distribution and its potential uses. It is a generalization of a Poisson distribution, since the exponentially distributed arrival times of a Poisson process are special cases of the gamma distributed arrival times in this process. In this vignette I use the phrase "gamma-count process" to relate to the gamma-count distribution in the same way a Poisson process is related to the Poisson distribution.
 
 ## Distribution Summary \label{sec:gc-definition}
 
@@ -98,7 +98,7 @@ For a Poisson process (special case of $\alpha = 1$) this doesn't matter because
 
 This issue is illustrated by the mean and variance plots below for varying values of $\alpha$ and small $\lambda$.
 
-```{r plotmeanvar1, cache=TRUE, fig.width=7, fig.height=7}
+```{r plotmeanvar1, fig.width=7, fig.height=7}
 lambda.vals <- seq(0.02, 3, by=0.02)
 alpha.vals <- c(1, 2, 10, 20, 0.5, 0.1)
 max.x <- 200
@@ -142,7 +142,7 @@ The intuition is that if $L$ is large enough, then no matter how regular or clus
 
 # First Arrival Time Distribution
 
-With the new start time $L$, consider the time between $L$ and the first event arrival after $L$. This section derives a distribution for this time, which will be useful later.
+With the new start time $L$, consider the time between $L$ and the first event arrival after $L$. This section derives a distribution for this time, which will be useful later. In the notation of the gamma-count process, we will define this first time as $\delta_1 = \tau_1$, and renumber subsequent arrivals starting at this point. In this section, the first arrival time is refered to simply as $\tau$.
 
 ## Derivation of the distribution
 
@@ -153,6 +153,8 @@ Now we know that $L$ is within a gap between events $S \sim \mathrm{gamma}(\alph
 \tau | S=s &\sim \mathrm{uniform}(0, s) \\
 S &\sim \mathrm{gamma}(\alpha + 1, \alpha)
 \end{align*}
+
+We say $\tau \sim \mathrm{ft}(\alpha)$.
 
 ## First arrival time density
 
@@ -182,7 +184,9 @@ P(\tau > t) &= \int_t^\infty \int_t^s \frac{1}{s} \frac{\alpha^{\alpha+1}}{\Gamm
 &= \mathrm{pgamma}(t, \alpha+1, \alpha, \mathrm{lower.tail=F}) - t \cdot \mathrm{pgamma}(t, \alpha, \alpha, \mathrm{lower.tail=F})
 \end{align*}
 
-## First arrival time expected value
+## First arrival time properties
+
+### Expected value
 
 The expected value of the first arrival time can be found with the law of iterated expectation:
 \begin{align*}
@@ -191,7 +195,7 @@ The expected value of the first arrival time can be found with the law of iterat
 &= \frac{\alpha+1}{2\alpha}
 \end{align*}
 
-## First arrival time variance
+### Variance
 
 The variance of the first arrival time can be found with the law of total variance:
 \begin{align*}
@@ -205,11 +209,15 @@ The variance of the first arrival time can be found with the law of total varian
 &= \mathrm{E}[\tau]\frac{\alpha+5}{6\alpha}
 \end{align*}
 
+### Mode
+
+Since the PDF of $\tau$ is strictly decreasing, its mode is at the leftmost endpoint $\tau = 0$.
+
 ## Simulations of first arrival times
 
 In this section, I provide simulations verifying the derived first arrival time distributions.
 
-```{r first-arrival-simulations, cache=TRUE, fig.width=7, fig.height=5} 
+```{r first-arrival-simulations, fig.width=7, fig.height=5} 
 set.seed(2020)
 
 n <- 5000
@@ -243,6 +251,74 @@ for (alpha in alphas) {
 ```
 
 The above code simulates `r numevents` event arrival times, picks an $L$ between `r Lmin` and `r Lmax`, then measures the size of the gap in which $L$ lands and the time between $L$ and the next event. This process is repeated for `r length(alphas)` values of $\alpha$ and `r n` trials. The histograms are the empirical times and the blue or red lines are the theoretical distributions.
+
+# Later Arrival Time Distributions
+
+Now that we have the distribution for $\delta_1 = \tau_1 \sim \mathrm{ft}(\alpha)$ defined above, the natural next question is if we can similary know the distribution of later arrival times, $\tau_n = \sum_{i=1}^n \delta_i$ for $n > 1$. Recall that $\delta_i \sim \mathrm{gamma}(\alpha, \alpha)$ for $i > 1$.
+
+We will say that $\tau_n \sim \mathrm{arrival}(n, \alpha)$, so that $\mathrm{ft}(\alpha) = \mathrm{arrival}(1, \alpha)$.
+
+## Arrival time densities
+
+We want the density of $\tau_n = \tau_1 + \sum_{i=2}^n \delta_i$ for $n > 1$. For this derivation, define $\Delta = \sum_{i=2}^n \delta_i$, and note that $\Delta \sim \mathrm{gamma}((n-1)\alpha, \alpha)$. We can do the convolution of the densities $f_{\tau_1}$ of $\tau_1$, and $f_\Delta$ of $\Delta$ to find the density of their sum.
+
+$$
+f_{\tau_n}(x) = \int_0^{x} f_{\tau_1}(x - t)f_\Delta(t) \mathrm{d}t
+$$
+If $Y$ is a random variable such that $Y \sim \mathrm{gamma}(\alpha, \alpha)$, then we can rewrite the integral above as
+\begin{align*}
+f_{\tau_n}(x) &= \int_0^{x} \mathrm{P}(Y > x - t)f_\Delta(t) \mathrm{d}t \\
+&= \int_0^\infty \mathrm{P}(Y > x - t)f_\Delta(t) \mathrm{d}t - \int_x^\infty f_\Delta(t) \mathrm{d}t \\
+&= \mathrm{P}(Y+\Delta > x) - \mathrm{P}(\Delta > x),
+\end{align*}
+because $\mathrm{P}(Y > x - t) = 1$ for $t > x$, and noticing that the first integral in the next step is a convolution of two gamma random variables. Since $Y + \Delta \sim \mathrm{gamma}(n\alpha, \alpha)$ we have this density also in terms of gamma CDFs.
+
+$$
+f_{\tau_n}(t) = Q(n\alpha, \alpha t) - Q((n-1)\alpha, \alpha t),
+$$
+where $Q(s,x) = \Gamma(s)^{-1}\int_x^\infty t^{s-1} e^{-t} \mathrm{d}t$ is the regularized upper incomplete gamma function.
+
+## Arrival time CDFs
+
+To find the CDF of $\tau_n$, we can use the identity $\int \Gamma(s, x) \mathrm{d}x = x\Gamma(s, x) - \Gamma(s+1, x) + C$ for $\Gamma(s, x) = \int_x^\infty t^{s-1} e^{-t} \mathrm{d}t$ the upper incomplete gamma function.
+\begin{align*}
+\int f_{\tau_n}(t) \mathrm{d}t &= \int \Gamma(n\alpha, \alpha t)/\Gamma(n\alpha) \mathrm{d}t - \int \Gamma((n-1)\alpha, \alpha t)/\Gamma((n-1)\alpha) \mathrm{d}t \\
+&= \frac{1}{\alpha\Gamma(n\alpha)}(\alpha t \Gamma(n\alpha, \alpha t) - \Gamma(n\alpha + 1, \alpha t)) - \frac{1}{\alpha\Gamma((n-1)\alpha)}(\alpha t \Gamma((n-1)\alpha, \alpha t) - \Gamma((n-1)\alpha + 1, \alpha t)) + C\\
+&= (t Q(n\alpha, \alpha t) - n Q(n\alpha + 1, \alpha t)) - (t Q((n-1)\alpha, \alpha t) - (n-1)Q((n-1)\alpha + 1, \alpha t)) + C
+\end{align*}
+
+At $t=0$, this antiderivative evaluates to $-1$, which gives us the constant of integration.
+
+## Arrival time properties
+
+### Expected value
+
+From its construction as the sum of wait times, we have
+\begin{align*}
+\mathrm{E}[\tau_n] &= \mathrm{E}\left[\sum_{i=1}^n \delta_i \right] \\
+&= \frac{\alpha + 1}{2\alpha} + n - 1 \\
+&= n + \frac{1 - \alpha}{2\alpha}
+\end{align*}
+
+### Variance
+
+Similarly by its construction, we have
+\begin{align*}
+\mathrm{Var}(\tau_n) &= \mathrm{Var}\left(\sum_{i=1}^n \delta_i \right) \\
+&= \frac{\alpha+1}{2\alpha}\cdot\frac{\alpha+5}{6\alpha} + \frac{n - 1}{\alpha}
+\end{align*}
+
+### Mode
+
+The mode of the distribution of $\tau_n$ is the maximal point of its density. We find this by setting its derivative equal to zero and solving:
+\begin{align*}
+\frac{\mathrm{d}}{\mathrm{d}t}f_{\tau_n}(t) &= \frac{\mathrm{d}}{\mathrm{d}t}\left(Q(n\alpha, \alpha t) - Q((n-1)\alpha, \alpha t)\right) \\
+&= -\alpha\Gamma(n\alpha)^{-1}(\alpha t)^{n\alpha - 1}e^{-\alpha t} + \alpha\Gamma((n-1)\alpha)^{-1}(\alpha t)^{(n-1)\alpha - 1}e^{-\alpha t} \\
+&= 0 \\
+\implies t &= \frac{1}{\alpha}\left(\frac{\Gamma(n\alpha)}{\Gamma((n-1)\alpha)}\right)^{\frac{1}{\alpha}}
+\end{align*}
+
+
 
 # Gamma-Count with Random Start Time (GCRST)
 
@@ -392,7 +468,7 @@ for $n > 0$. The $n=0$ case remains in terms of the first arrival time cdf.
 
 ### Mean and Variance at small $\lambda$
 
-```{r plotmeanvar2, cache=TRUE, fig.width=7, fig.height=7}
+```{r plotmeanvar2, fig.width=7, fig.height=7, eval=FALSE}
 lambda.vals <- seq(0.02, 3, by=0.02)
 alpha.vals <- c(1, 2, 10, 20, 0.5, 0.1)
 max.x <- 200
