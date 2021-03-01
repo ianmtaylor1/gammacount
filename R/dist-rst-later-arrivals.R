@@ -8,13 +8,36 @@ darrival <- function(x, num=1, alpha=1, log=FALSE) {
   num <- recycle(num, len)
   alpha <- recycle(alpha, len)
 
-  logdens <- pgamma(x, num * alpha, alpha, lower.tail=FALSE, log.p=TRUE)
+  # Enumerate the special cases to fix after the fact
+  resnan <- (alpha <= 0) | (num != floor(num)) | (num < 1)
+  nosupport <- (!resnan) & (x < 0)
 
-  first <- (num == 1)
-  logdens[!first] <- logdiffexp(
-    logdens[!first],
-    pgamma(x[!first], (num[!first] - 1) * alpha[!first], alpha[!first], lower.tail=FALSE, log.p=TRUE)
+  # Calculate the mode to use as a switchover between representations
+  fmode <- exp((lgamma(num * alpha) - lgamma((num - 1) * alpha)) / alpha) / alpha
+
+  # Calculation categories
+  first <- (num == 1)             # First arrival - simpler form of density
+  usep <- (!first) & (x < fmode)  # Left of the mode, use lower.tail=TRUE in pgamma
+  useq <- (!first) & (!usep)      # Right of the mode, use lower.tail=FALSE in pgamma
+
+  logdens <- rep(NaN, len)
+
+  # For first arrivals, use only one pgamma
+  logdens[first] <- pgamma(x[first], alpha[first], alpha[first], lower.tail=FALSE, log.p=TRUE)
+  # For left-hand, use pgamma with lower tail
+  logdens[usep] <- logdiffexp(
+    pgamma(x[usep], (num[usep] - 1) * alpha[usep], alpha[usep], lower.tail=TRUE, log.p=TRUE),
+    pgamma(x[usep], num[usep] * alpha[usep],       alpha[usep], lower.tail=TRUE, log.p=TRUE)
   )
+  # For right-hand, use pgamma with upper tail
+  logdens[useq] <- logdiffexp(
+    pgamma(x[useq], num[useq] * alpha[useq],       alpha[useq], lower.tail=FALSE, log.p=TRUE),
+    pgamma(x[useq], (num[useq] - 1) * alpha[useq], alpha[useq], lower.tail=FALSE, log.p=TRUE)
+  )
+
+  # Fix edge cases
+  logdens[resnan] <- NaN
+  logdens[nosupport] <- -Inf
 
   if (log) {
     logdens
