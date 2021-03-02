@@ -25,6 +25,7 @@ library(gammacount)
 # General Guidelines
 
 In this package, the guiding principles for ensuring numerical accuracy of computations are
+
 1. Offload as much as possible to base `R` functions such as `pgamma`.
 2. Work with probabilities and densities in the log scale, and exponentiate as a last step if required.
 3. When given the choice, work with the complement of a probability if the complement is smaller.
@@ -58,4 +59,42 @@ $$f_{\tau_n}(t) = P((n-1)\alpha, \alpha t) - P(n\alpha, \alpha t).$$
 This form of the density has the opposite behavior for small $t$, as both $P$ functions approach zero.
 
 We choose the distribution's mode as a convenient cutoff point to switch between using each representation and use the $P$ form for $t$ less than the mode, and use the $Q$ form for $t$ greater than the mode.
+
+# Arrival Time CDFs
+
+The CDF of the arrival time distribution is given by:
+$$\int_0^t f_{\tau_n}(u) \mathrm{d}u = (t Q(n\alpha, \alpha t) - n Q(n\alpha + 1, \alpha t)) - (t Q((n-1)\alpha, \alpha t) - (n-1)Q((n-1)\alpha + 1, \alpha t)) + 1$$
+There is a lot of potential for loss of accuracy in the final $+1$, so we use equivalent forms for either the lower CDF $F_{\tau_n}(t)$ or the upper CDF $1 - F_{\tau_n}(t)$. 
+
+First, the upper CDF:
+\begin{align*}
+1 - F_{\tau_n}(t)
+&= 1 - \left[(t Q(n\alpha, \alpha t) - n Q(n\alpha + 1, \alpha t)) - (t Q((n-1)\alpha, \alpha t) - (n-1)Q((n-1)\alpha + 1, \alpha t)) + 1\right] \\
+&= (n Q(n\alpha + 1, \alpha t) - t Q(n\alpha, \alpha t)) - ((n-1)Q((n-1)\alpha + 1, \alpha t) - t Q((n-1)\alpha, \alpha t)) \\
+&= (n Q(n\alpha + 1, \alpha t) + t Q((n-1)\alpha, \alpha t)) - ((n-1)Q((n-1)\alpha + 1, \alpha t) + t Q(n\alpha, \alpha t))
+\end{align*}
+
+This form, computed on the log scale, preserves accuracy in the right tail. The only call to `logdiffexp` will be with arguments which are both large negative log probabilities.
+
+For the lower CDF, we need to start with the alternate representation of the density,
+$$f_{\tau_n}(t) = P((n-1)\alpha, \alpha t) - P(n\alpha, \alpha t)$$
+
+Integrating this gives the CDF:
+\begin{align*}
+F_{\tau_n}(t) &= \int_0^t \left[P((n-1)\alpha, \alpha u) - P(n\alpha, \alpha u)\right] \mathrm{d}u \\
+&= (t P((n-1)\alpha, \alpha t) - (n-1)P((n-1)\alpha + 1, \alpha t)) - (t P(n\alpha, \alpha t) - n P(n\alpha + 1, \alpha t)) \\
+&= (t P((n-1)\alpha, \alpha t) + n P(n\alpha + 1, \alpha t)) - (t P(n\alpha, \alpha t) + (n-1)P((n-1)\alpha + 1, \alpha t))
+\end{align*}
+
+This form preserves accuracy on the left tail when computed on the log scale.
+
+Both of these forms, however, lose accuracy in the opposite tail. There are three strategies for how to handle this:
+
+1. **Do nothing.** Use the upper CDF form when the user sets `lower.tail=F` and the lower CDF form otherwise. It's not my fault if the user requests a lower tail probability in the far right tail.
+2. **Active tail choice.** Use a central switchover point to initially compute whatever tail is closer and convert using `logdiffexp(0, logp)` if the user requested the complementary probability. The median would be a natural choice for this point, but the median isn't available directly in this distribution. So we can use the mean or the mode instead.
+3. **Passive tail choice.** Initially do nothing, compute using whichever form corresponds to the user's choice of tail. Then if the resulting probability is above some threshold, recompute using the opposite tail and convert using `logdiffexp(0, logp)`. This can be used to passively compute using a median switchover point, but at the cost of some extra computation. The switchover point can also be made much higher, e.g. $\log(0.99)$, to only recompute if we are fairly certain there was loss of accuracy.
+
+Note: the median can be bounded with medians of gamma distributions, but `qgamma` is several times as expensive as `pgamma`. So if the median is desired as the switchover point, it's faster to use the passive option anyway.
+
+Through playing around, I think the median is the best option for a switchover point. So I went with option 3.
 

@@ -9,7 +9,7 @@ darrival <- function(x, num=1, alpha=1, log=FALSE) {
   alpha <- recycle(alpha, len)
 
   # Enumerate the special cases to fix after the fact
-  resnan <- (alpha <= 0) | (num != floor(num)) | (num < 1)
+  resnan <- (!is.finite(alpha)) | (!is.finite(num)) | (alpha <= 0) | (num != floor(num)) | (num < 1)
   nosupport <- (!resnan) & (x < 0)
 
   # Calculate the mode to use as a switchover between representations
@@ -50,40 +50,44 @@ darrival <- function(x, num=1, alpha=1, log=FALSE) {
 #' @export
 parrival <- function(x, num=1, alpha=1, lower.tail=TRUE, log.p=FALSE) {
 
-  # This calculates the log complementary cdf and transforms it as necessary
-  # in the end to lower tail and/or nonlog version
-
   len <- max(length(x), length(num), length(alpha))
-  x <- recycle(x, len)
+  x <- recycle(pmax(x, 0), len)
   num <- recycle(num, len)
   alpha <- recycle(alpha, len)
 
-  logccdf <- logdiffexp(
-    log(num) + pgamma(x, num * alpha + 1, alpha, lower.tail=FALSE, log.p=TRUE),
-    log(x)   + pgamma(x, num * alpha,     alpha, lower.tail=FALSE, log.p=TRUE)
-  )
+  # Special case to return NaN - invalid parameter values
+  resnan <- (!is.finite(alpha)) | (!is.finite(num)) | (alpha <= 0) | (num != floor(num)) | (num < 1)
 
-  first <- (num == 1)
-  logccdf[!first] <- logdiffexp(
-    logccdf[!first],
-    logdiffexp(
-      log(num[!first] - 1) + pgamma(x[!first], (num[!first] - 1) * alpha[!first] + 1, alpha[!first], lower.tail=FALSE, log.p=TRUE),
-      log(x[!first])       + pgamma(x[!first], (num[!first] - 1) * alpha[!first],     alpha[!first], lower.tail=FALSE, log.p=TRUE)
-    )
-  )
-
-  # Correct for numerical errors early when ccdf is highest
-  logccdf <- pmin(logccdf, 0)
-
-  # Correct to lower tail and exponentiate if necessary
-  if (lower.tail && !log.p) {
-    exp(logdiffexp(0, logccdf))
-  } else if (lower.tail) {
-    logdiffexp(0, logccdf)
-  } else if (!log.p) {
-    exp(logccdf)
+  # Fill in the non-NaN values of the logcdf from the appropriate subfunction
+  logcdf <- rep(NaN, len)
+  first <- ((!resnan) & (num == 1))
+  later <- ((!resnan) & (num > 1))
+  if (lower.tail) {
+    logcdf[first] <- parrival_left_first(x[first], alpha[first])
+    logcdf[later] <- parrival_left_later(x[later], num[later], alpha[later])
   } else {
-    logccdf
+    logcdf[first] <- parrival_right_first(x[first], alpha[first])
+    logcdf[later] <- parrival_right_later(x[later], num[later], alpha[later])
+  }
+
+  # Check if recomputing in the opposite tail might be beneficial
+  # switchpoint value MUST be larger than log(1/2) = -0.693 to avoid infinite
+  # recursion, and preferably leave a little room
+  switchpoint <- -0.5
+  recompute <- (!resnan) & (logp > switchpoint)
+  logcdf[recompute] <- logdiffexp(
+    0,
+    parrival(x[recompute], num[recompute], alpha[recompute], log.p=TRUE, lower.tail=!lower.tail)
+  )
+
+  # Correct for numerical errors, if present
+  logcdf <- pmin(logcdf, 0)
+
+  # Exponentiate if necessary and return
+  if (log.p) {
+    logcdf
+  } else {
+    exp(logcdf)
   }
 }
 
@@ -92,14 +96,67 @@ rarrival <- function(n, num=1, alpha=1) {
   num <- recycle(num, n)
   alpha <- recycle(alpha, n)
 
+  resnan <- (!is.finite(alpha)) | (!is.finite(num)) | (alpha <= 0) | (num != floor(num)) | (num < 1)
+
   # First time
-  tau1 <- rft(n, alpha)
+  tau1 <- runif(n, 0, rgamma(n, alpha + 1, alpha))
 
   # Remaining inter-arrival times
-  delta <- 0
+  delta <- rep(0, n)
   first <- (num == 1)
   delta[!first] <- rgamma(sum(!first), (num[!first] - 1) * alpha[!first], alpha[!first])
 
   # Resulting arrival times
-  tau1 + delta
+  val <- tau1 + delta
+  val[resnan] <- NaN
+  val
+}
+
+
+######## Sub-functions for parrival in different cases
+# Each returns the log cdf as described in its top comment.
+# Each does no parameter checking, they strictly do the computation.
+
+# Left-hand probability for first arrivals (num == 1)
+parrival_left_first <- function(x, alpha) {
+  logsumexp(
+    pgamma(x, alpha+1, rate=alpha, log.p=TRUE, lower.tail=TRUE),
+    log(x) + pgamma(x, alpha, rate=alpha, log.p=TRUE, lower.tail=FALSE)
+  )
+}
+
+# Left-hand probability for later arrivals (num > 1)
+parrival_left_later <- function(x, num, alpha) {
+  logdiffexp(
+    logsumexp(
+      log(num) + pgamma(x, num * alpha + 1,   alpha, log.p=TRUE, lower.tail=TRUE),
+      log(x)   + pgamma(x, (num - 1) * alpha, alpha, log.p=TRUE, lower.tail=TRUE)
+    ),
+    logsumexp(
+      log(num - 1) + pgamma(x, (num - 1) * alpha + 1, alpha, log.p=TRUE, lower.tail=TRUE),
+      log(x)       + pgamma(x, num * alpha,           alpha, log.p=TRUE, lower.tail=TRUE)
+    )
+  )
+}
+
+# Right-hand probability for first arrivals (num == 1)
+parrival_right_first <- function(x, alpha) {
+  logdiffexp(
+    pgamma(x, alpha+1, rate=alpha, log.p=TRUE, lower.tail=FALSE),
+    log(x) + pgamma(x, alpha, rate=alpha, log.p=TRUE, lower.tail=FALSE)
+  )
+}
+
+# Right-hand probability for later arrivals (num > 1)
+parrival_right_later <- function(x, num, alpha) {
+  logdiffexp(
+    logsumexp(
+      log(num) + pgamma(x, num * alpha + 1,   alpha, log.p=TRUE, lower.tail=FALSE),
+      log(x)   + pgamma(x, (num - 1) * alpha, alpha, log.p=TRUE, lower.tail=FALSE)
+    ),
+    logsumexp(
+      log(num - 1) + pgamma(x, (num - 1) * alpha + 1, alpha, log.p=TRUE, lower.tail=FALSE),
+      log(x)       + pgamma(x, num * alpha,           alpha, log.p=TRUE, lower.tail=FALSE)
+    )
+  )
 }
