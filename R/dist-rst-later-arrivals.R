@@ -74,11 +74,13 @@ parrival <- function(x, num=1, alpha=1, lower.tail=TRUE, log.p=FALSE) {
   # switchpoint value MUST be larger than log(1/2) = -0.693 to avoid infinite
   # recursion, and preferably leave a little room
   switchpoint <- -0.5
-  recompute <- (!resnan) & (logp > switchpoint)
-  logcdf[recompute] <- logdiffexp(
-    0,
-    parrival(x[recompute], num[recompute], alpha[recompute], log.p=TRUE, lower.tail=!lower.tail)
-  )
+  recompute <- (!resnan) & (logcdf > switchpoint)
+  if (sum(recompute) > 0) {
+    logcdf[recompute] <- logdiffexp(
+      0,
+      parrival(x[recompute], num[recompute], alpha[recompute], log.p=TRUE, lower.tail=!lower.tail)
+    )
+  }
 
   # Correct for numerical errors, if present
   logcdf <- pmin(logcdf, 0)
