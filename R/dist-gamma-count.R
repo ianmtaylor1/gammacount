@@ -41,11 +41,22 @@ NULL
 #' @rdname GammaCount
 #' @export
 dgc <- function(x, lambda, alpha=1, log=FALSE) {
-  # Define the pmf in terms of the cdf. This avoids double-checking parameter
-  # values.
-  lp <- logdiffexp(
-    pgc(x, lambda, alpha, log.p=TRUE),
-    pgc(x-1, lambda, alpha, log.p=TRUE)
+  n <- max(length(x), length(lambda), length(alpha))
+  x <- recycle(x, n)
+  lambda <- recycle(lambda, n)
+  alpha <- recydle(alpha, n)
+  # Define the pmf in terms of the cdf. Choose direction based on relation of x
+  # to lambda.
+  left <- (x <= lambda)
+  left[is.na(left)] <- FALSE
+  lp <- rep(NaN, n)
+  lp[left] <- logdiffexp(
+    pgc(x[left],     lambda[left], alpha[left], log.p=TRUE),
+    pgc(x[left] - 1, lambda[left], alpha[left], log.p=TRUE)
+  )
+  lp[!left] <- logdiffexp(
+    pgc(x[!left] - 1, lambda[!left], alpha[!left], log.p=TRUE, lower.tail=FALSE),
+    pgc(x[!left],     lambda[!left], alpha[!left], log.p=TRUE, lower.tail=FALSE)
   )
   # The one thing we do need to fix is zero probability for non-integer values
   # of x
