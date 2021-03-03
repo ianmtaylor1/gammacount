@@ -16,9 +16,9 @@ darrival <- function(x, num=1, alpha=1, log=FALSE) {
   fmode <- exp((lgamma(num * alpha) - lgamma((num - 1) * alpha)) / alpha) / alpha
 
   # Calculation categories
-  first <- (num == 1)             # First arrival - simpler form of density
-  usep <- (!first) & (x < fmode)  # Left of the mode, use lower.tail=TRUE in pgamma
-  useq <- (!first) & (!usep)      # Right of the mode, use lower.tail=FALSE in pgamma
+  first <- (!resnan) & (num == 1)             # First arrival - simpler form of density
+  usep <- (!resnan) & (!first) & (x < fmode)  # Left of the mode, use lower.tail=TRUE in pgamma
+  useq <- (!resnan) & (!first) & (!usep)      # Right of the mode, use lower.tail=FALSE in pgamma
 
   logdens <- rep(NaN, len)
 
