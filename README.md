@@ -1,7 +1,7 @@
 # gammacount
-The Gamma-count distribution, related distributions, and extensions
+Distributions related to gamma renewal processes.
 
-This R package contains functions for the gammacount (gc), first arrival time (ft), and gammacount with random start time (rst) distributions.
+This R package contains distribution functions (density, probability, quantile, and random number generation) for gamma renewal processes. Distributions include counts for a standard and stationary gamma renewal process, the limiting remaining life distribution, and subsequent renewal time distributions in the stationary process.
 
 ## Development
 

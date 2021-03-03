@@ -4,7 +4,7 @@ Title: Gamma-Count Distribution Functions
 Version: 2.0.0
 Author: Ian Taylor
 Maintainer: Ian Taylor <ian@iantaylor.xyz>
-Description: The Gamma-count distribution, related distributions, and extensions
+Description: Distributions related to gamma renewal processes
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
