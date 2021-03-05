@@ -8,20 +8,23 @@
 \alias{rgc}
 \title{The Gamma-Count Distribution}
 \usage{
-dgc(x, lambda, alpha = 1, log = FALSE)
+dgc(x, lambda, alpha = 1, beta = alpha, log = FALSE)
 
-pgc(q, lambda, alpha = 1, lower.tail = TRUE, log.p = FALSE)
+pgc(q, lambda, alpha = 1, beta = alpha, lower.tail = TRUE, log.p = FALSE)
 
-qgc(p, lambda, alpha = 1, lower.tail = TRUE, log.p = FALSE)
+qgc(p, lambda, alpha = 1, beta = alpha, lower.tail = TRUE, log.p = FALSE)
 
-rgc(n, lambda, alpha = 1)
+rgc(n, lambda, alpha = 1, beta = alpha)
 }
 \arguments{
 \item{x}{vector of (non-negative integer) quantiles}
 
-\item{lambda}{vector of (positive) scale/mean parameters}
+\item{lambda}{vector of (positive) time length parameters}
 
 \item{alpha}{vector of (positive) dispersion parameters}
+
+\item{beta}{vector of (positive) rate parameters. By default, beta = alpha
+so that arrival times have mean 1.}
 
 \item{log, log.p}{logical; if TRUE, probabilities p are given as log(p)}
 
@@ -37,7 +40,7 @@ rgc(n, lambda, alpha = 1)
 dgc gives the (log) density, pgc gives the (log) distribution
   function, qgc gives the quantile function, and rgc generates random counts.
 
-  Invalid lambda or alpha will result in return value NaN, with a warning.
+  Invalid lambda, alpha, or beta will result in return value NaN.
 
   The length of the result is determined by n for rgc, and the length of the
   longest numeric argument for the other functions. The numerical arguments
@@ -46,13 +49,19 @@ dgc gives the (log) density, pgc gives the (log) distribution
 }
 \description{
 Density, distribution function, quantile function, and random number
-generation for the gamma-count distribution with scale/mean parameter lambda
-and dispersion parameter alpha
+generation for the gamma-count distribution with time parameter lambda
+and gamma distribution parameters alpha and beta.
 }
 \details{
 The gamma-count distribution models the count of events arriving in the
 interval (0,lambda] when the times between successive events follow a
-gamma(alpha, alpha) distribution. Since the expected time between events is
-1, lambda is approximately the mean of the gamma-count distribution. This
-distribution has the Poisson distribution as a special case when alpha = 1.
+gamma(alpha, beta) distribution. This is a renewal process with gamma renewal
+times. lambda * beta / alpha is approximately the mean. This distribution
+has the Poisson distribution as a special case when alpha = beta = 1.
+
+Note that lambda and beta have the same effect on the count distribution. The
+distribution of counts only depends on either through the product
+lambda * beta, so only one needs to be set. Therefore by default,
+beta = alpha. This way arrival times have mean 1 and lambda can be used to
+approximately model the mean of the count distribution.
 }

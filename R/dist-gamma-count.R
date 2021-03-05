@@ -1,33 +1,41 @@
 # This file contains functions for the Gamma count distribution
-# Like poisson, but arrivals are gamma(alpha,alpha). (expected value = 1)
+# Like poisson, but arrivals are gamma(alpha,beta). (expected value = alpha/beta)
 # Length of count interval is lambda, like poisson.
 # poisson is a special case with alpha=1.
 
 #' The Gamma-Count Distribution
 #'
 #' Density, distribution function, quantile function, and random number
-#' generation for the gamma-count distribution with scale/mean parameter lambda
-#' and dispersion parameter alpha
+#' generation for the gamma-count distribution with time parameter lambda
+#' and gamma distribution parameters alpha and beta.
 #'
 #' The gamma-count distribution models the count of events arriving in the
 #' interval (0,lambda] when the times between successive events follow a
-#' gamma(alpha, alpha) distribution. Since the expected time between events is
-#' 1, lambda is approximately the mean of the gamma-count distribution. This
-#' distribution has the Poisson distribution as a special case when alpha = 1.
+#' gamma(alpha, beta) distribution. This is a renewal process with gamma renewal
+#' times. lambda * beta / alpha is approximately the mean. This distribution
+#' has the Poisson distribution as a special case when alpha = beta = 1.
+#'
+#' Note that lambda and beta have the same effect on the count distribution. The
+#' distribution of counts only depends on either through the product
+#' lambda * beta, so only one needs to be set. Therefore by default,
+#' beta = alpha. This way arrival times have mean 1 and lambda can be used to
+#' approximately model the mean of the count distribution.
 #'
 #' @param x vector of (non-negative integer) quantiles
 #' @param q vector of quantiles
 #' @param p vector of probabilities
 #' @param n number of random values to return
-#' @param lambda vector of (positive) scale/mean parameters
+#' @param lambda vector of (positive) time length parameters
 #' @param alpha vector of (positive) dispersion parameters
+#' @param beta vector of (positive) rate parameters. By default, beta = alpha
+#'   so that arrival times have mean 1.
 #' @param log,log.p logical; if TRUE, probabilities p are given as log(p)
 #' @param lower.tail logical; if TRUE, probabilities are P[X <= x], otherwise P[X > x]
 #'
 #' @return dgc gives the (log) density, pgc gives the (log) distribution
 #'   function, qgc gives the quantile function, and rgc generates random counts.
 #'
-#'   Invalid lambda or alpha will result in return value NaN, with a warning.
+#'   Invalid lambda, alpha, or beta will result in return value NaN.
 #'
 #'   The length of the result is determined by n for rgc, and the length of the
 #'   longest numeric argument for the other functions. The numerical arguments
@@ -40,23 +48,24 @@ NULL
 # Probability mass funtion for gamma-count distribution
 #' @rdname GammaCount
 #' @export
-dgc <- function(x, lambda, alpha=1, log=FALSE) {
-  n <- max(length(x), length(lambda), length(alpha))
+dgc <- function(x, lambda, alpha=1, beta=alpha, log=FALSE) {
+  n <- max(length(x), length(lambda), length(alpha), length(beta))
   x <- recycle(x, n)
   lambda <- recycle(lambda, n)
-  alpha <- recydle(alpha, n)
+  alpha <- recycle(alpha, n)
+  beta <- recycle(beta, n)
   # Define the pmf in terms of the cdf. Choose direction based on relation of x
-  # to lambda.
-  left <- (x <= lambda)
+  # to the approximate center of the distribution.
+  left <- (x <= lambda * beta / alpha)
   left[is.na(left)] <- FALSE
   lp <- rep(NaN, n)
   lp[left] <- logdiffexp(
-    pgc(x[left],     lambda[left], alpha[left], log.p=TRUE),
-    pgc(x[left] - 1, lambda[left], alpha[left], log.p=TRUE)
+    pgc(x[left],     lambda[left], alpha[left], beta[left], log.p=TRUE),
+    pgc(x[left] - 1, lambda[left], alpha[left], beta[left], log.p=TRUE)
   )
   lp[!left] <- logdiffexp(
-    pgc(x[!left] - 1, lambda[!left], alpha[!left], log.p=TRUE, lower.tail=FALSE),
-    pgc(x[!left],     lambda[!left], alpha[!left], log.p=TRUE, lower.tail=FALSE)
+    pgc(x[!left] - 1, lambda[!left], alpha[!left], beta[!left], log.p=TRUE, lower.tail=FALSE),
+    pgc(x[!left],     lambda[!left], alpha[!left], beta[!left], log.p=TRUE, lower.tail=FALSE)
   )
   # The one thing we do need to fix is zero probability for non-integer values
   # of x
@@ -73,7 +82,7 @@ dgc <- function(x, lambda, alpha=1, log=FALSE) {
 # Cumulative distribution function for gamma-count distribution
 #' @rdname GammaCount
 #' @export
-pgc <- function(q, lambda, alpha=1, lower.tail=TRUE, log.p=FALSE) {
+pgc <- function(q, lambda, alpha=1, beta=alpha, lower.tail=TRUE, log.p=FALSE) {
   # Use pgamma to calculate the probabilities (following Zeviani et al. (2013))
   # A few useful tricks:
   #  1. Fill invalid parameter values with NaN so that the NaN propogates to the
@@ -82,7 +91,7 @@ pgc <- function(q, lambda, alpha=1, lower.tail=TRUE, log.p=FALSE) {
   #     x == -1 behaves nicely for all x < 0. Use pmax to provide lower bound.
   pgamma(ifelse(lambda > 0, lambda, NaN),
          (pmax(floor(q), -1) + 1) * ifelse(alpha > 0, alpha, NaN),
-         rate = ifelse(alpha > 0, alpha, NaN),
+         rate = ifelse(beta > 0, beta, NaN),
          lower.tail = !lower.tail,
          log.p = log.p)
 }
@@ -95,7 +104,7 @@ pgc <- function(q, lambda, alpha=1, lower.tail=TRUE, log.p=FALSE) {
 #' @rdname GammaCount
 #' @export
 qgc <- Vectorize(
-  function(p, lambda, alpha=1, lower.tail=TRUE, log.p=FALSE) {
+  function(p, lambda, alpha=1, beta=alpha, lower.tail=TRUE, log.p=FALSE) {
     # Check for high and low values of p to return Inf or NaN
     if (lower.tail && !log.p) {
       if (p == 1) return(Inf)
@@ -114,7 +123,7 @@ qgc <- Vectorize(
       if (p > 0) return (NaN)
     }
     # Check for invalid values of parameters to return NaN
-    if ((lambda <= 0) || (alpha <= 0)) return(NaN)
+    if ((lambda <= 0) || (alpha <= 0) || (beta <= 0)) return(NaN)
 
     # Correct p for lower.tail if necessary. Value multiplied by p and pgc().
     mult <- if (lower.tail) { 1 } else { -1 }
@@ -124,41 +133,21 @@ qgc <- Vectorize(
     # high.x stores the smallest known value of x that is large enough:
     # pgc(high.x, lambda, alpha) >= p
 
-    # Initial low and high estimates from poisson quantiles. Assuming qpois is
-    # accurate, this interval will contain the true quantile for the gc
-    # distribution. It should be reasonably close for the gcrst distribution,
-    # within one or two expansion phases.
-    poisq <- qpois(p, lambda * alpha, lower.tail=lower.tail, log.p=log.p)
-    if (is.finite(poisq)) {
-      low.x <- floor(poisq / alpha) - 1
-      high.x <- ceiling((poisq + 1) / alpha) - 1
-    } else {
-      # Fallback in case qpois can't handle the far tail
-      low.x <- -1
-      high.x <- ceiling(2 * lambda)
-    }
-
-    # Expansion phase: search away from the initial interval until finding a
+    # Expansion phase: search out from zero until finding a
     # range such that q \in (low.x, high.x] and the two above inequalities are
     # satisfied. Only one of expand-up or expand-down will ever happen
-    # Expand-up
-    while(pgc(high.x, lambda, alpha, log.p=log.p, lower.tail=lower.tail) * mult < p * mult) {
-      step <- ceiling(1.414 * (high.x - low.x))
+    low.x <- -1
+    high.x <- 0
+    while(pgc(high.x, lambda, alpha, beta, log.p=log.p, lower.tail=lower.tail) * mult < p * mult) {
       low.x <- high.x
-      high.x <- low.x + step
-    }
-    # Expand-down
-    while(pgc(low.x, lambda, alpha, log.p=log.p, lower.tail=lower.tail) * mult >= p * mult) {
-      step <- ceiling(1.414 * (high.x - low.x))
-      high.x <- low.x
-      low.x <- max(high.x - step, -1)
+      high.x <- high.x * 2 + 1
     }
 
     # Search phase: the value is somewhere between low.x (exclusive) and high.x
     # (inclusive). Divide this range roughly in half until the value is found
     while(high.x - low.x > 1) {
       x <- (high.x + low.x) %/% 2
-      if (pgc(x, lambda, alpha, log.p=log.p, lower.tail=lower.tail) * mult < p * mult) {
+      if (pgc(x, lambda, alpha, beta, log.p=log.p, lower.tail=lower.tail) * mult < p * mult) {
         low.x <- x
       } else {
         high.x <- x
@@ -168,14 +157,14 @@ qgc <- Vectorize(
     # low.x and high.x are one apart, meaning that high.x is the value to return
     return(high.x)
   },
-  vectorize.args = c("p", "lambda", "alpha")
+  vectorize.args = c("p", "lambda", "alpha", "beta")
 )
 
 # Random number generator for gamma-count distribution
 #' @rdname GammaCount
 #' @export
-rgc <- function(n, lambda, alpha=1) {
+rgc <- function(n, lambda, alpha=1, beta=alpha) {
   u <- runif(n) # Will use probability integral transform
-  return(qgc(u, recycle(lambda, n), recycle(alpha, n)))
+  return(qgc(u, recycle(lambda, n), recycle(alpha, n), recycle(beta, n)))
 }
 
