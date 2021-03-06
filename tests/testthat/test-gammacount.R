@@ -1,20 +1,25 @@
 test_that("reduces to poisson", {
   x <- seq(0, 200)
-  for (lambda in c(0.01, 0.5, 1, 1.5, 10, 20, 100)) {
-    expect_equal(dgc(x, lambda, alpha=1), dpois(x, lambda))
-    expect_equal(pgc(x, lambda, alpha=1), ppois(x, lambda))
+  for (lambda in c(0.1, 0.5, 1, 1.5, 10)) {
+    for (beta in c(0.1, 0.5, 1, 1.5, 10)) {
+      expect_equal(dgc(x, lambda, alpha=1, beta), dpois(x, lambda * beta))
+      expect_equal(pgc(x, lambda, alpha=1, beta), ppois(x, lambda * beta))
+    }
   }
 })
 
 test_that("cdf is sum of pmf", {
   alpha.vals <- c(0.1, 1, 10)
-  lambda.vals <- c(0.5, 5, 50)
+  lambda.vals <- c(0.5, 5, 10)
+  beta.vals <- c(0.5, 5, 10)
   x <- seq(0, 100)
   for (alpha in alpha.vals) {
     for (lambda in lambda.vals) {
-      pmf <- dgc(x, lambda, alpha)
-      cdf <- pgc(x, lambda, alpha)
-      expect_equal(cumsum(pmf), cdf)
+      for (beta in beta.vals) {
+        pmf <- dgc(x, lambda, alpha, beta)
+        cdf <- pgc(x, lambda, alpha, beta)
+        expect_equal(cumsum(pmf), cdf)
+      }
     }
   }
 })
@@ -69,13 +74,16 @@ test_that("output is correct length", {
     alpha <- seq_len(alpha.length)
     for (lambda.length in lengths) {
       lambda <- seq_len(lambda.length)
-      for (n in lengths) {
-        x <- seq_len(n)
-        expect_length(rgc(n, lambda, alpha), n)
-        expected.length <- max(n, lambda.length, alpha.length)
-        expect_length(dgc(x, lambda, alpha), expected.length)
-        expect_length(pgc(x, lambda, alpha), expected.length)
-        expect_length(qgc(x/(max(x)+1), lambda, alpha), expected.length)
+      for (beta.length in lengths) {
+        beta <- seq_len(beta.length)
+        for (n in lengths) {
+          x <- seq_len(n)
+          expect_length(rgc(n, lambda, alpha, beta), n)
+          expected.length <- max(n, lambda.length, alpha.length, beta.length)
+          expect_length(dgc(x, lambda, alpha, beta), expected.length)
+          expect_length(pgc(x, lambda, alpha, beta), expected.length)
+          expect_length(qgc(x/(max(x)+1), lambda, alpha, beta), expected.length)
+        }
       }
     }
   }
