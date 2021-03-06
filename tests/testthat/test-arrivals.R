@@ -1,16 +1,39 @@
 test_that("reduces to exponential", {
   x <- c(0.01, 0.05, seq(0.1, 10, by=.1))
-  expect_equal(dft(x, alpha=1), dexp(x, rate=1))
-  expect_equal(pft(x, alpha=1), pexp(x, rate=1))
+  for (beta in c(0.1, 1, 10)) {
+    expect_equal(dglel(x, alpha=1, beta), dexp(x, rate=beta))
+    expect_equal(pglel(x, alpha=1, beta), pexp(x, rate=beta))
+  }
+})
+
+test_that("reduces to gamma", {
+  x <- c(0.01, 0.05, seq(0.1, 10, by=.1))
+  for (beta in c(0.1, 1, 10)) {
+    for (num in c(2, 5, 10, 20)) {
+      expect_equal(dsga(x, num, alpha=1, beta), dgamma(x, shape=num, rate=beta))
+      expect_equal(psga(x, num, alpha=1, beta), pgamma(x, shape=num, rate=beta))
+    }
+  }
 })
 
 test_that("pdf is derivative of cdf", {
   tol <- .Machine$double.eps ^ 0.25
   x <- c(0.01, 0.05, seq(0.1, 10, by=.1))
-  alpha <- recycle(c(0.1, 1, 10), length(x))
+  alpha <- recycle(c(0.1, 1, 10, 0.1, 1, 10, 0.1, 1, 10), length(x))
+  beta <- recycle(c(0.1, 0.1, 0.1, 1, 1, 1, 10, 10, 10), length(x))
+  num <- recycle(c(1,2,3,4), length(x))
   eps <- .Machine$double.eps * 100
-  deriv <- numericDeriv(quote(pft(x, alpha)), "x")
-  expect_equal(diag(attr(deriv,"gradient")), dft(x, alpha), tolerance=tol)
+
+  # Take the derivative of the *log* cdf
+  deriv <- numericDeriv(quote(psga(x, num, alpha, beta, log.p=TRUE)), "x")
+
+  # What should the derivative of the *log* cdf be? d/dx log(f(x)) = f'(x)/f(x)
+  expected <- exp(
+    dsga(x, num, alpha, beta, log=TRUE)
+    - psga(x, num, alpha, beta, log.p=TRUE)
+  )
+
+  expect_equal(diag(attr(deriv,"gradient")), expected, tolerance=tol)
 })
 
 test_that("cdf and quantile functions are inverses", {
@@ -18,76 +41,75 @@ test_that("cdf and quantile functions are inverses", {
   # p -> q
   x <- seq(0, 10, by=.1)
   alpha <- recycle(c(0.1, 1, 10), length(x))
-  p <- pft(x, alpha, log.p=TRUE, lower.tail=FALSE)
-  expect_equal(qft(p, alpha, log.p=TRUE, lower.tail=FALSE, tol=eps), x)
+  num <- recycle(c(1,2,3,4), length(x))
+  p <- psga(x, num, alpha, log.p=TRUE, lower.tail=FALSE)
+  expect_equal(qsga(p, num, alpha, log.p=TRUE, lower.tail=FALSE, tol=eps), x)
   # q -> p
   p <- seq(0.01, 0.99, by=.01)
   alpha <- recycle(c(0.1, 1, 10), length(p))
-  x <- qft(p, alpha, tol=eps)
-  expect_equal(pft(x, alpha), p)
+  num <- recycle(c(1,2,3,4), length(p))
+  x <- qsga(p, num, alpha, tol=eps)
+  expect_equal(psga(x, num, alpha), p)
 })
 
 test_that("log equals the log", {
   # density and distribution functions
   x <- seq(0, 10, by=.1)
   alpha <- recycle(c(0.1, 1, 10), length(x))
-  expect_equal(dft(x, alpha, log=TRUE), log(dft(x, alpha)))
-  expect_equal(pft(x, alpha, log.p=TRUE), log(pft(x, alpha)))
+  expect_equal(dglel(x, alpha, log=TRUE), log(dglel(x, alpha)))
+  expect_equal(pglel(x, alpha, log.p=TRUE), log(pglel(x, alpha)))
   # quantile functions
   p <- seq(0.01, 0.99, by=.01)
   alpha <- recycle(c(0.1, 1, 10), length(p))
-  expect_equal(qft(p, alpha), qft(log(p), alpha, log.p=TRUE))
+  expect_equal(qglel(p, alpha), qglel(log(p), alpha, log.p=TRUE))
 })
 
 test_that("upper tail equals one minus", {
   # distribution function
   x <- seq(0, 10, by=.1)
   alpha <- recycle(c(0.1, 1, 10), length(x))
-  expect_equal(pft(x, alpha, lower.tail=FALSE), 1 - pft(x, alpha))
+  expect_equal(pglel(x, alpha, lower.tail=FALSE), 1 - pglel(x, alpha))
   # quantile function
   p <- seq(0.01, 0.99, by=.01)
   alpha <- recycle(c(0.1, 1, 10), length(p))
-  expect_equal(qft(p, alpha), qft(1 - p, alpha, lower.tail=FALSE))
+  expect_equal(qglel(p, alpha), qglel(1 - p, alpha, lower.tail=FALSE))
 })
 
 test_that("output is correct length", {
   lengths <- c(3, 6, 12)
   for (alpha.length in lengths) {
     alpha <- seq_len(alpha.length)
-    for (n in lengths) {
-      x <- seq_len(n)
-      expect_length(rft(n, alpha), n)
-      expected.length <- max(n, alpha.length)
-      expect_length(dft(x, alpha), expected.length)
-      expect_length(pft(x, alpha), expected.length)
-      expect_length(qft(x/(max(x)+1), alpha), expected.length)
+    for (beta.length in lengths) {
+      beta <- seq_len(beta.length)
+      for (num.length in lengths) {
+        num <- seq_len(num.length)
+        for (n in lengths) {
+          x <- seq_len(n)
+          expect_length(rsga(n, num, alpha, beta), n)
+          expected.length <- max(n, alpha.length, beta.length, num.length)
+          expect_length(dsga(x, num, alpha, beta), expected.length)
+          expect_length(psga(x, num, alpha, beta), expected.length)
+          expect_length(qsga(x/(max(x)+1), num, alpha, beta), expected.length)
+        }
+      }
     }
   }
 })
 
 test_that("rng matches cdf (approximately)", {
   set.seed(123) # Set the seed so that no failures by chance
-  alpha.vals <- c(0.01, 0.1, 1, 10, 100)
-  testsig <- 0.01 # Small enough to avoid false positives
+  alpha.vals <- c(0.01, 1, 10, 100)
+  beta.vals <- c(0.1, 1, 10)
+  num.vals <- c(1, 2, 3)
+  testsig <- 0.005 # Small enough to avoid false positives
   n <- 100000 # Large enough for high power
   for (alpha in alpha.vals) {
-    x <- rft(n, alpha)
-    testresult <- ks.test(x, pft, alpha=alpha)
-    expect_gt(testresult$p.value, testsig)
+    for (beta in beta.vals) {
+      for (num in num.vals) {
+        x <- rsga(n, num, alpha, beta)
+        testresult <- ks.test(x, psga, num=num, alpha=alpha, beta=beta, exact=FALSE)
+        expect_gt(testresult$p.value, testsig)
+      }
+    }
   }
-})
-
-test_that("partial ev passes basic checks", {
-  # Check that full calculation leads to EV.
-  alpha <- c(0.01, 0.1, 1, 10, 100)
-  expect_equal(ft.partial.ev(0, alpha, lower.tail=FALSE), (alpha + 1) / (2 * alpha))
-  # Check that other boundaries return zero
-  expect_equal(ft.partial.ev(0, alpha), rep(0, length(alpha)))
-  # Lower tail and upper tail add up to expected value
-  x <- seq(0.1, 10, by=0.1)
-  alpha <- recycle(alpha, length(x))
-  expect_equal(
-    ft.partial.ev(x, alpha, lower.tail=TRUE) +
-      ft.partial.ev(x, alpha, lower.tail=FALSE),
-    (alpha + 1) / (2 * alpha))
 })

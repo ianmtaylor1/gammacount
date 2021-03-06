@@ -75,17 +75,17 @@ dsga <- function(x, num=1, alpha=1, beta=alpha, log=FALSE) {
   logdens <- rep(NaN, len)
 
   # For first arrivals, use only one pgamma
-  logdens[first] <- pgamma(x[first], alpha[first], beta[first], lower.tail=FALSE, log.p=TRUE) - log(alpha / beta)
+  logdens[first] <- pgamma(x[first], alpha[first], beta[first], lower.tail=FALSE, log.p=TRUE) - log(alpha[first] / beta[first])
   # For left-hand, use pgamma with lower tail
   logdens[usep] <- logdiffexp(
     pgamma(x[usep], (num[usep] - 1) * alpha[usep], beta[usep], lower.tail=TRUE, log.p=TRUE),
     pgamma(x[usep], num[usep] * alpha[usep],       beta[usep], lower.tail=TRUE, log.p=TRUE)
-  ) - log(alpha / beta)
+  ) - log(alpha[usep] / beta[usep])
   # For right-hand, use pgamma with upper tail
   logdens[useq] <- logdiffexp(
-    pgamma(x[useq], num[useq] * alpha[useq],       alpha[useq], lower.tail=FALSE, log.p=TRUE),
-    pgamma(x[useq], (num[useq] - 1) * alpha[useq], alpha[useq], lower.tail=FALSE, log.p=TRUE)
-  ) - log(alpha / beta)
+    pgamma(x[useq], num[useq] * alpha[useq],       beta[useq], lower.tail=FALSE, log.p=TRUE),
+    pgamma(x[useq], (num[useq] - 1) * alpha[useq], beta[useq], lower.tail=FALSE, log.p=TRUE)
+  ) - log(alpha[useq] / beta[useq])
 
   # Fix edge cases
   logdens[resnan] <- NaN
@@ -213,27 +213,18 @@ qsga <- function(p, num=1, alpha=1, beta=alpha, lower.tail=TRUE, log.p=FALSE,
 #' @rdname StationaryGammaArrival
 #' @export
 rsga <- function(n, num=1, alpha=1, beta=alpha) {
-  num <- recycle(num, n)
-  alpha <- recycle(alpha, n)
-  beta <- recycle(beta, n)
 
-  resnan <- (
-    (!is.finite(alpha))  | (alpha <= 0)
-    | (!is.finite(num))  | (num != floor(num)) | (num < 1)
-    | (!is.finite(beta)) | (beta <= 0)
-  )
+  # Fill any invalid values of num with Nan
+  num <- ifelse(is.finite(num) & (num == floor(num)) & (num >= 1), num, NaN)
 
   # First time
   tau1 <- runif(n, 0, rgamma(n, alpha + 1, beta))
 
   # Remaining inter-arrival times
-  delta <- rep(0, n)
-  first <- (num == 1)
-  delta[!first] <- rgamma(sum(!first), (num[!first] - 1) * alpha[!first], beta[!first])
+  delta <- rgamma(n, (num - 1) * alpha, beta)
 
   # Resulting arrival times
   val <- tau1 + delta
-  val[resnan] <- NaN
   val
 }
 
