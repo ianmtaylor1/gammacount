@@ -51,10 +51,10 @@ rglel(n, alpha = 1, beta = alpha)
 \item{num}{vector of positive integers for the number of the arrival in
 sequence. 1 is first, 2 is second, and so on.}
 
-\item{alpha}{vector of (positive) dispersion parameters}
+\item{alpha}{vector of (positive) shape parameters}
 
 \item{beta}{vector of (positive) rate parameters. By default, beta = alpha
-so that arrival times have mean 1.}
+so that inter-arrival times have mean 1.}
 
 \item{log, log.p}{logical; if TRUE, probabilities p are given as log(p)}
 

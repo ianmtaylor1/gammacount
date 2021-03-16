@@ -19,9 +19,9 @@
 #' @param n number of random values to return
 #' @param num vector of positive integers for the number of the arrival in
 #'   sequence. 1 is first, 2 is second, and so on.
-#' @param alpha vector of (positive) dispersion parameters
+#' @param alpha vector of (positive) shape parameters
 #' @param beta vector of (positive) rate parameters. By default, beta = alpha
-#'   so that arrival times have mean 1.
+#'   so that inter-arrival times have mean 1.
 #' @param log,log.p logical; if TRUE, probabilities p are given as log(p)
 #' @param lower.tail logical; if TRUE, probabilities are P[X <= x], otherwise P[X > x]
 #' @param tol the tolerance for calculating quantiles
