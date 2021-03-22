@@ -51,11 +51,11 @@ In this form, `logsumexp` can take advantage of `R`'s `log1p` function, and `log
 # Arrival Time Densities
 
 Recall that the density of the $n^{th}$ arrival time after a random start time has the density
-$$f_{\tau_n}(t) = Q(n\alpha, \alpha t) - Q((n-1)\alpha, \alpha t).$$
+$$f_{\tau_n}(t) = \frac{\beta}{\alpha}(Q(n\alpha, \beta t) - Q((n-1)\alpha, \beta t)).$$
 For $n \geq 2$, $\lim_{t\to 0} f_{\tau_n}(t) = \lim_{t\to \infty} f_{\tau_n}(t) = 0$. On the left tail this is because both $Q$ functions approach one, while on the right tail this is because both $Q$ functions approach zero.
 
 On the log scale, finding the difference between two probabilities $p$ and $p+\epsilon$ is subject to less loss of accuracy when $p$ is small than large. So the density as written will be more accurate for large $t$ than for small $t$. To improve accuracy for small $t$, we notice that the density can also be written in terms of regularized lower incomplete gamma functions
-$$f_{\tau_n}(t) = P((n-1)\alpha, \alpha t) - P(n\alpha, \alpha t).$$
+$$f_{\tau_n}(t) = \frac{\beta}{\alpha}(P((n-1)\alpha, \beta t) - P(n\alpha, \beta t)).$$
 This form of the density has the opposite behavior for small $t$, as both $P$ functions approach zero.
 
 We choose the distribution's mode as a convenient cutoff point to switch between using each representation and use the $P$ form for $t$ less than the mode, and use the $Q$ form for $t$ greater than the mode.
@@ -69,21 +69,21 @@ There is a lot of potential for loss of accuracy in the final $+1$, so we use eq
 First, the upper CDF:
 \begin{align*}
 1 - F_{\tau_n}(t)
-&= 1 - \left[(t Q(n\alpha, \alpha t) - n Q(n\alpha + 1, \alpha t)) - (t Q((n-1)\alpha, \alpha t) - (n-1)Q((n-1)\alpha + 1, \alpha t)) + 1\right] \\
-&= (n Q(n\alpha + 1, \alpha t) - t Q(n\alpha, \alpha t)) - ((n-1)Q((n-1)\alpha + 1, \alpha t) - t Q((n-1)\alpha, \alpha t)) \\
-&= (n Q(n\alpha + 1, \alpha t) + t Q((n-1)\alpha, \alpha t)) - ((n-1)Q((n-1)\alpha + 1, \alpha t) + t Q(n\alpha, \alpha t))
+&= 1 - \left[\left(\frac{\beta t}{\alpha} Q(n\alpha, \beta t) - n Q(n\alpha + 1, \beta t)\right) - \left(\frac{\beta t}{\alpha} Q((n-1)\alpha, \beta t) - (n-1)Q((n-1)\alpha + 1, \beta t)\right) + 1\right] \\
+&= \left(n Q(n\alpha + 1, \beta t) - \frac{\beta t}{\alpha} Q(n\alpha, \beta t)\right) - \left((n-1)Q((n-1)\alpha + 1, \beta t) - \frac{\beta t}{\alpha} Q((n-1)\alpha, \beta t)\right) \\
+&= \left(n Q(n\alpha + 1, \beta t) + \frac{\beta t}{\alpha} Q((n-1)\alpha, \beta t)\right) - \left((n-1)Q((n-1)\alpha + 1, \beta t) + \frac{\beta t}{\alpha} Q(n\alpha, \beta t)\right)
 \end{align*}
 
 This form, computed on the log scale, preserves accuracy in the right tail. The only call to `logdiffexp` will be with arguments which are both large negative log probabilities.
 
 For the lower CDF, we need to start with the alternate representation of the density,
-$$f_{\tau_n}(t) = P((n-1)\alpha, \alpha t) - P(n\alpha, \alpha t)$$
+$$f_{\tau_n}(t) = \frac{\beta}{\alpha}(P((n-1)\alpha, \alpha t) - P(n\alpha, \alpha t))$$
 
 Integrating this gives the CDF:
 \begin{align*}
-F_{\tau_n}(t) &= \int_0^t \left[P((n-1)\alpha, \alpha u) - P(n\alpha, \alpha u)\right] \mathrm{d}u \\
-&= (t P((n-1)\alpha, \alpha t) - (n-1)P((n-1)\alpha + 1, \alpha t)) - (t P(n\alpha, \alpha t) - n P(n\alpha + 1, \alpha t)) \\
-&= (t P((n-1)\alpha, \alpha t) + n P(n\alpha + 1, \alpha t)) - (t P(n\alpha, \alpha t) + (n-1)P((n-1)\alpha + 1, \alpha t))
+F_{\tau_n}(t) &= \int_0^t \left[\frac{\beta}{\alpha}P((n-1)\alpha, \beta u) - \frac{\beta}{\alpha}P(n\alpha, \beta u)\right] \mathrm{d}u \\
+&= \left(\frac{\beta t}{\alpha} P((n-1)\alpha, \beta t) - (n-1)P((n-1)\alpha + 1, \beta t)\right) - \left(\frac{\beta t}{\alpha} P(n\alpha, \beta t) - n P(n\alpha + 1, \beta t)\right) \\
+&= \left(\frac{\beta t}{\alpha} P((n-1)\alpha, \beta t) + n P(n\alpha + 1, \beta t)\right) - \left(\frac{\beta t}{\alpha} P(n\alpha, \beta t) + (n-1)P((n-1)\alpha + 1, \beta t)\right)
 \end{align*}
 
 This form preserves accuracy on the left tail when computed on the log scale.
