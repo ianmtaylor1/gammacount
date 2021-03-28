@@ -96,5 +96,5 @@ Both of these forms, however, lose accuracy in the opposite tail. There are thre
 
 Note: the median can be bounded with medians of gamma distributions, but `qgamma` is several times as expensive as `pgamma`. So if the median is desired as the switchover point, it's faster to use the passive option anyway.
 
-Through playing around, I think the median is the best option for a switchover point. So I went with option 3.
+In order to avoid double computation and opporunity for error, I chose the active tail choice option with the mean as a switchover point.
 

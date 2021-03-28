@@ -119,24 +119,19 @@ psga <- function(x, num=1, alpha=1, beta=alpha, lower.tail=TRUE, log.p=FALSE) {
   logcdf <- rep(NaN, len)
   first <- ((!resnan) & (num == 1))
   later <- ((!resnan) & (num > 1))
+  switchover <- ((num - 1) * alpha / beta) + ((alpha + 1) / (2 * beta)) # mean
+  right <- ((!resnan) & (x > switchover))
+  left <- ((!resnan) & (x <= switchover))
+  # Compute in the default direction based on how x compares to the mean
+  logcdf[first & left] <- psga_left_first(x[first & left], alpha[first & left], beta[first & left])
+  logcdf[later & left] <- psga_left_later(x[later & left], num[later & left], alpha[later & left], beta[later & left])
+  logcdf[first & right] <- psga_right_first(x[first & right], alpha[first & right], beta[first & right])
+  logcdf[later & right] <- psga_right_later(x[later & right], num[later & right], alpha[later & right], beta[later & right])
+  # Check if we need to flip any of the default computations
   if (lower.tail) {
-    logcdf[first] <- psga_left_first(x[first], alpha[first], beta[first])
-    logcdf[later] <- psga_left_later(x[later], num[later], alpha[later], beta[later])
+    logcdf[right] <- logdiffexp(0, logcdf[right])
   } else {
-    logcdf[first] <- psga_right_first(x[first], alpha[first], beta[first])
-    logcdf[later] <- psga_right_later(x[later], num[later], alpha[later], beta[later])
-  }
-
-  # Check if recomputing in the opposite tail might be beneficial
-  # switchpoint value MUST be larger than log(1/2) = -0.693 to avoid infinite
-  # recursion, and preferably leave a little room
-  switchpoint <- -0.5
-  recompute <- (!resnan) & (logcdf > switchpoint)
-  if (sum(recompute) > 0) {
-    logcdf[recompute] <- logdiffexp(
-      0,
-      psga(x[recompute], num[recompute], alpha[recompute], beta[recompute], log.p=TRUE, lower.tail=!lower.tail)
-    )
+    logcdf[left] <- logdiffexp(0, logcdf[left])
   }
 
   # Correct for numerical errors, if present
